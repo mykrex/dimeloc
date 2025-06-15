@@ -19,7 +19,6 @@ struct MapView: View {
         center: CLLocationCoordinate2D(latitude: 25.6866, longitude: -100.3161),
         span:   MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.05)
     )
-    
 
     private var stats: (total: Int, excelentes: Int, bien: Int, problematicas: Int) {
         let total        = tiendas.count
@@ -30,7 +29,7 @@ struct MapView: View {
     }
 
     private var displayedTiendas: [Tienda] {
-      // first, category filter
+      // apply category filter
       let byCategory: [Tienda]
       switch selectedFilter {
       case .total:
@@ -47,7 +46,7 @@ struct MapView: View {
         byCategory = tiendas.filter { $0.nps < 30 || $0.damageRate > 1 || $0.outOfStock > 4 }
       }
 
-    // then, if the user has typed something, further narrow down by name:
+      // then apply search filter
      guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else {
        return byCategory
      }
@@ -57,166 +56,183 @@ struct MapView: View {
      }
     }
 
-
-    
     var body: some View {
         ZStack(alignment: .top) {
-            // 1) Full-screen map
+            // 1) Map display
             Map(coordinateRegion: $region,
                 showsUserLocation: true,
-                userTrackingMode: $trackingMode,      // ← new
+                userTrackingMode: $trackingMode,
                 annotationItems: displayedTiendas) { tienda in
                 MapAnnotation(coordinate: tienda.coordinate) {
                     TiendaMarker(tienda: tienda) {
-                      // 1) start loader
                       isDetailLoading = true
                       selectedTienda   = tienda
-
-                      // 2) simulate (or perform) your detail fetch
                       Task {
-                        // if you need to fetch extra data: await apiClient.fetchDetail(for: tienda)
-                        try? await Task.sleep(nanoseconds: 300 * 1_000_000) // small artificial delay
+                        try? await Task.sleep(nanoseconds: 300 * 1_000_000)
                         isDetailLoading = false
                         showingDetail   = true
                       }
                     }
-
                 }
             }
             .ignoresSafeArea()
 
-            // 2) Search bar + stats panel (flush to top)
-            VStack(spacing: 1) {
-                // Search
-                HStack {
+            // 2) Floating search bar and filters
+            VStack(spacing: 16) {
+                // Floating search bar
+                HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(Color("dlOrange"))
-                    TextField(
-                        "",
-                        text: $searchText,
-                        prompt: Text("Buscar tienda")
-                            .foregroundColor(Color("dlOrange"))
-                    )
-                    .disableAutocorrection(true)
-                    .foregroundColor(Color("dlOrange"))  // this now only affects the typed text
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
                     
+                    TextField("Buscar tienda", text: $searchText)
+                        .font(.system(size: 16))
+                        .disableAutocorrection(true)
                 }
-                .padding(12)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                .shadow(radius: 1)
-                .padding(.horizontal)
-                
-                // right under your search HStack…
-                if !searchText.isEmpty {
-                  // container that grows to fit, up to 250pt tall
-                  ScrollView {
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+
+                // Search suggestions
+                if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                     VStack(spacing: 0) {
-                      if displayedTiendas.isEmpty {
-                        Text("No se encontró ninguna tienda")
-                          .foregroundColor(.secondary)
-                          .padding()
-                      } else {
-                        ForEach(displayedTiendas) { tienda in
-                          Button {
-                            // zoom + show detail
-                          } label: {
+                        if displayedTiendas.isEmpty {
                             HStack {
-                              Text(tienda.nombre)
-                              Spacer()
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.secondary)
+                                Text("No se encontró '\(searchText)'")
+                                    .foregroundColor(.secondary)
+                                Spacer()
                             }
-                            .padding()
-                          }
-                          // draw a divider except after the last row
-                          if tienda.id != displayedTiendas.last?.id {
-                            Divider()
-                          }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                        } else {
+                            ForEach(displayedTiendas.prefix(5)) { tienda in
+                                Button {
+                                    // Center map on selected tienda and show detail
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        region.center = tienda.coordinate
+                                        region.span = MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                                    }
+                                    selectedTienda = tienda
+                                    searchText = ""
+                                    
+                                    // Show detail after a brief delay
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                        showingDetail = true
+                                    }
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "location.fill")
+                                            .foregroundColor(.blue)
+                                            .font(.system(size: 14))
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(tienda.nombre)
+                                                .foregroundColor(.primary)
+                                                .font(.system(size: 15, weight: .medium))
+                                                .lineLimit(1)
+                                            
+                                            Text("\(String(format: "%.4f", tienda.location.latitude)), \(String(format: "%.4f", tienda.location.longitude))")
+                                                .foregroundColor(.secondary)
+                                                .font(.system(size: 12))
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "arrow.up.left")
+                                            .foregroundColor(.secondary)
+                                            .font(.system(size: 12))
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 12)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                if tienda.id != displayedTiendas.prefix(5).last?.id {
+                                    Divider()
+                                        .padding(.horizontal, 20)
+                                }
+                            }
                         }
-                      }
                     }
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                  }
-                  .frame(maxHeight: 250)   // *only* cap the max height
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    .padding(.horizontal, 20)
                 }
 
-                // Stats
+                // Filter buttons with flexible width
                 if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-                    HStack() {
-                        Button { selectedFilter = .total } label: {
-                            StatsCard(title: "Total",         value: stats.total,        color: .blue)
-                                .frame(maxWidth: .infinity)
-                                .padding(12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                                .shadow(radius: 1)
-                                .overlay(RoundedRectangle(cornerRadius:25)
-                                    .stroke(selectedFilter == .total ? Color.accentColor : .clear, lineWidth:3))
+                    HStack(spacing: 8) {
+                        MapFilterChip(
+                            title: "Todos",
+                            count: stats.total,
+                            isSelected: selectedFilter == .total,
+                            filterType: .total
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFilter = .total
+                            }
                         }
                         
-                        Button { selectedFilter = .excelentes } label: {
-                            StatsCard(title: "Excelentes",    value: stats.excelentes,   color: .green)
-                                .fixedSize()
-                                .padding(12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                                .shadow(radius: 1)
-                                .overlay(RoundedRectangle(cornerRadius:25)
-                                    .stroke(selectedFilter == .excelentes ? Color.accentColor : .clear, lineWidth:3))
+                        MapFilterChip(
+                            title: "Excelentes",
+                            count: stats.excelentes,
+                            isSelected: selectedFilter == .excelentes,
+                            filterType: .excelentes
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFilter = .excelentes
+                            }
                         }
                         
-                        Button { selectedFilter = .bien } label: {
-                            StatsCard(title: "Bien",          value: stats.bien,         color: .yellow)
-                                .frame(maxWidth: .infinity)
-                                .padding(12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                                .shadow(radius: 1)
-                                .frame(maxWidth: .infinity)
-                                .overlay(RoundedRectangle(cornerRadius:25)
-                                    .stroke(selectedFilter == .bien ? Color.accentColor : .clear, lineWidth:3))
+                        MapFilterChip(
+                            title: "Bien",
+                            count: stats.bien,
+                            isSelected: selectedFilter == .bien,
+                            filterType: .bien
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFilter = .bien
+                            }
                         }
                         
-                        Button { selectedFilter = .problematicas } label: {
-                            StatsCard(title: "Problemáticas", value: stats.problematicas, color: .red)
-                                .fixedSize()
-                                .padding(12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                                .shadow(radius: 1)
-                                .overlay(RoundedRectangle(cornerRadius:25)
-                                    .stroke(selectedFilter == .problematicas ? Color.accentColor : .clear, lineWidth:3))
+                        MapFilterChip(
+                            title: "Problemáticas",
+                            count: stats.problematicas,
+                            isSelected: selectedFilter == .problematicas,
+                            filterType: .problematicas
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFilter = .problematicas
+                            }
                         }
-                        
                     }
-                    
-                    .padding(12)
-                    // no background/shadow on the HStack itself
-                    
+                    .padding(.horizontal, 16)
                 }
+                
+                Spacer()
             }
-            .padding(.trailing)
-            // 3) Detail‐loading overlay
+
+            // 3) Loading overlays
             if isDetailLoading {
-              // Dim the entire screen
-              Color.black.opacity(0.3)
-                .ignoresSafeArea()
-
-              // Centered spinner
-              ProgressView("Cargando detalle…")
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                
+                ProgressView("Cargando detalle…")
+                    .padding(20)
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
 
-
-            // 3) Loading indicator
             if isLoading {
                 ProgressView("Cargando tiendas…")
-                    .padding()
-                    .background(Color.white.opacity(0.9))
-                    .cornerRadius(10)
+                    .padding(20)
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
         }
         .sheet(isPresented: $showingDetail) {
@@ -233,13 +249,8 @@ struct MapView: View {
             locationManager.requestPermission()
             Task { await cargarTiendas() }
         }
-        .onChange(of: selectedFilter) { _ in            adjustRegion(to: displayedTiendas)
-        }
-        // somewhere in your view modifiers, e.g. just after onAppear:
-        .onChange(of: searchText) { _ in
-          adjustRegion(to: displayedTiendas)
-        }
-
+        .onChange(of: selectedFilter) { _ in adjustRegion(to: displayedTiendas) }
+        .onChange(of: searchText) { _ in adjustRegion(to: displayedTiendas) }
     }
 
     private func cargarTiendas() async {
@@ -256,7 +267,7 @@ struct MapView: View {
     private func adjustRegion(to items: [Tienda]) {
       guard !items.isEmpty else { return }
       let coords = items.map { $0.coordinate }
-      let lats   = coords.map(\.latitude), lngs = coords.map(\.longitude)
+      let lats   = coords.map(\ .latitude), lngs = coords.map(\ .longitude)
       let center = CLLocationCoordinate2D(
         latitude: (lats.min()! + lats.max()!) / 2,
         longitude:(lngs.min()! + lngs.max()!) / 2
@@ -267,7 +278,67 @@ struct MapView: View {
       )
       withAnimation { region = MKCoordinateRegion(center: center, span: span) }
     }
+}
 
+// MARK: - Map Filter Chip Component
+struct MapFilterChip: View {
+    let title: String
+    let count: Int
+    let isSelected: Bool
+    let filterType: MapView.FilterCategory
+    let action: () -> Void
+    
+    private var filterColor: Color {
+        switch filterType {
+        case .total:
+            return .blue
+        case .excelentes:
+            return .green
+        case .bien:
+            return .orange
+        case .problematicas:
+            return .red
+        }
+    }
+    
+    // Dynamic width based on title length
+    private var chipWidth: CGFloat {
+        switch filterType {
+        case .problematicas:
+            return 95  // Wider for "Problemáticas"
+        default:
+            return 80  // Standard width for other buttons
+        }
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                
+                Text("\(count)")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(isSelected ? .white : filterColor)
+            }
+            .frame(width: chipWidth, height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? filterColor : Color(.systemGray6))
+            )
+            .shadow(
+                color: isSelected ? filterColor.opacity(0.3) : Color.black.opacity(0.05),
+                radius: isSelected ? 6 : 2,
+                x: 0,
+                y: isSelected ? 3 : 1
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
 }
 
 struct MapView_Previews: PreviewProvider {

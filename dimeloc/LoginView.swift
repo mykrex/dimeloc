@@ -3,9 +3,9 @@ import SwiftUI
 struct LoginView: View {
     var onLogin: () -> Void
 
+    @StateObject private var authManager = AuthManager()
     @State private var email: String = ""
     @State private var password: String = ""
-    @State private var errorMessage: String? = nil
 
     var body: some View {
         VStack(alignment: .center, spacing: 60) {
@@ -20,7 +20,7 @@ struct LoginView: View {
                     inputField(title: "Correo", text: $email, placeholder: "Ingresa tu correo", isSecure: false)
                     inputField(title: "Contraseña", text: $password, placeholder: "Ingresa tu contraseña", isSecure: true)
 
-                    if let error = errorMessage {
+                    if let error = authManager.errorMessage {
                         Text(error)
                             .foregroundColor(.red)
                             .font(.caption)
@@ -33,10 +33,16 @@ struct LoginView: View {
 
                 Button(action: handleLogin) {
                     HStack(alignment: .center, spacing: 8) {
-                        Text("Inicia sesión")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, alignment: .center)
+                        if authManager.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Inicia sesión")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
@@ -44,28 +50,41 @@ struct LoginView: View {
                     .background(Color(red: 1, green: 0.29, blue: 0.2))
                     .cornerRadius(Constants.Style.RadiusFull)
                 }
+                .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
+                .opacity(authManager.isLoading || email.isEmpty || password.isEmpty ? 0.6 : 1.0)
             }
             .frame(maxWidth: .infinity, alignment: .top)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .top)
+        .onChange(of: authManager.isAuthenticated) { isAuthenticated in
+            if isAuthenticated {
+                onLogin()
+            }
+        }
     }
 
     private func handleLogin() {
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Validaciones locales (mantener la misma lógica visual)
         if trimmedEmail.isEmpty && trimmedPassword.isEmpty {
-            errorMessage = "Necesitas ingresar tus datos."
+            authManager.errorMessage = "Necesitas ingresar tus datos."
+            return
         } else if trimmedEmail.isEmpty {
-            errorMessage = "Falta el correo electrónico."
+            authManager.errorMessage = "Falta el correo electrónico."
+            return
         } else if trimmedPassword.isEmpty {
-            errorMessage = "Falta la contraseña."
-        } else if trimmedEmail.lowercased() == "maruca@arca.mx" && trimmedPassword == "Temporal123!" {
-            errorMessage = nil
-            onLogin()
-        } else {
-            errorMessage = "Correo o contraseña incorrectos."
+            authManager.errorMessage = "Falta la contraseña."
+            return
+        }
+
+        // Limpiar errores y hacer login real
+        authManager.clearError()
+        
+        Task {
+            await authManager.login(email: trimmedEmail, password: trimmedPassword)
         }
     }
 
@@ -107,7 +126,6 @@ struct LoginView: View {
         }
     }
 }
-
 
 #Preview {
     LoginView(onLogin: {})
