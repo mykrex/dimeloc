@@ -100,6 +100,7 @@ struct HomeView: View {
             }
             .padding()
         }
+        .padding(.horizontal, 10)
         .background(Color(.systemBackground))
     }
 }
