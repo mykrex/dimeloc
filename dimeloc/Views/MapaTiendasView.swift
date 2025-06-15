@@ -1,10 +1,3 @@
-//
-//  MapaTiendasView.swift
-//  dimeloc
-//
-//  Created by Maria Martinez on 14/06/25.
-//
-
 import SwiftUI
 import MapKit
 import CoreLocation
@@ -27,7 +20,7 @@ struct MapaTiendasView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Mapa principal
+                // Mapa principal - VERSIÓN QUE FUNCIONA
                 Map(coordinateRegion: $region,
                     showsUserLocation: true,
                     annotationItems: tiendas) { tienda in
@@ -205,7 +198,7 @@ struct MapaTiendasView: View {
     }
 }
 
-// MARK: - Location Manager (igual que antes)
+// MARK: - Location Manager
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     @Published var userLocation: CLLocationCoordinate2D?
@@ -245,7 +238,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 }
 
-// MARK: - Componentes del mapa (iguales que antes)
+// MARK: - Componentes del mapa
 struct TiendaMarker: View {
     let tienda: Tienda
     let onTap: () -> Void
@@ -318,5 +311,94 @@ struct StatCard: View {
         .background(Color.white.opacity(0.9))
         .cornerRadius(8)
         .shadow(radius: 2)
+    }
+}
+
+struct TiendaDetailView: View {
+    let tienda: Tienda
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(tienda.nombre)
+                            .font(.title2)
+                            .bold()
+                        
+                        HStack {
+                            Circle()
+                                .fill(tienda.performanceColor)
+                                .frame(width: 12, height: 12)
+                            Text(tienda.performanceText)
+                                .font(.subheadline)
+                                .foregroundColor(tienda.performanceColor)
+                        }
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
+                    
+                    // Métricas
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                        MetricCard(title: "NPS", value: String(format: "%.1f", tienda.nps), color: tienda.performanceColor)
+                        MetricCard(title: "Disponibilidad", value: String(format: "%.1f%%", tienda.fillfoundrate), color: .blue)
+                        MetricCard(title: "Daños", value: String(format: "%.2f%%", tienda.damageRate), color: tienda.damageRate > 1 ? .red : .green)
+                        MetricCard(title: "Desabasto", value: String(format: "%.2f%%", tienda.outOfStock), color: tienda.outOfStock > 4 ? .red : .green)
+                    }
+                    
+                    // Tiempo de resolución
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Tiempo de Resolución de Quejas")
+                            .font(.headline)
+                        
+                        HStack {
+                            Image(systemName: "clock")
+                                .foregroundColor(.orange)
+                            Text("\(String(format: "%.1f", tienda.complaintResolutionTimeHrs)) horas")
+                                .font(.title3)
+                                .bold()
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Detalle")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct MetricCard: View {
+    let title: String
+    let value: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Text(value)
+                .font(.title2)
+                .bold()
+                .foregroundColor(color)
+        }
+        .padding()
+        .background(Color.gray.opacity(0.05))
+        .cornerRadius(8)
     }
 }
