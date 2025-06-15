@@ -7,6 +7,10 @@ struct HomeView: View {
     private let softBlue = Color(red: 0.635, green: 0.824, blue: 1.0) // #A2D2FF
     private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
     
+    // MARK: - Logout State
+    @State private var showingLogoutAlert = false
+    @State private var isLoggingOut = false
+    
     // MARK: - Calendar State
     @State private var selectedCalendarFilter: CalendarFilter = .month
     @State private var selectedDate = Date()
@@ -18,7 +22,6 @@ struct HomeView: View {
     }
 
     // Mock user data
-    var userName: String = "Maruca"
 
     // Mock data models
     struct PendingVisit: Identifiable {
@@ -55,13 +58,10 @@ struct HomeView: View {
                 // MARK: - Sleek Header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Hola, \(userName)")
+                        Text("Dashboard")
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.primary)
                         
-                        Text("Dashboard")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.secondary)
                     }
                     
                     Spacer()
@@ -96,7 +96,7 @@ struct HomeView: View {
                                     )
                                 )
                             
-                            Text("\(userName) tienes \(pendingVisits.count) visitas pendientes este mes. Para tu siguiente visita, recomiendo checar el tema del refri agregado en el abarrote \(pendingVisits.first?.storeName ?? "Tienda A").")
+                            Text("Tienes \(pendingVisits.count) visitas pendientes este mes. Para tu siguiente visita, recomiendo checar el tema del refri agregado en el abarrote \(pendingVisits.first?.storeName ?? "Tienda A").")
                                 .font(.system(size: 14, weight: .regular))
                                 .foregroundColor(.secondary)
                                 .lineLimit(nil)
@@ -298,14 +298,117 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
 
-                Spacer(minLength: 20)
+                // MARK: - 🚪 LOGOUT SECTION
+                VStack(spacing: 16) {
+                    // Divider
+                    Rectangle()
+                        .fill(Color(.systemGray6))
+                        .frame(height: 1)
+                        .padding(.horizontal, 40)
+                    
+                    // Logout button
+                    Button(action: {
+                        showingLogoutAlert = true
+                    }) {
+                        HStack(spacing: 12) {
+                            if isLoggingOut {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.9)
+                            } else {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            
+                            Text(isLoggingOut ? "Cerrando sesión..." : "Terminar Sesión")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.red.opacity(0.8), Color.red],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .shadow(color: Color.red.opacity(0.3), radius: 4, x: 0, y: 2)
+                        )
+                    }
+                    .disabled(isLoggingOut)
+                    .padding(.horizontal, 20)
+                    
+                    // User info section
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                            
+                            Text("Sesión activa")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            
+                            Text("Última actividad: ahora")
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.bottom, 20)
+                }
+                .padding(.top, 24)
             }
         }
         .background(Color(.systemGroupedBackground))
+        .alert("Terminar Sesión", isPresented: $showingLogoutAlert) {
+            Button("Cancelar", role: .cancel) { }
+            Button("Cerrar Sesión", role: .destructive) {
+                Task {
+                    await performLogout()
+                }
+            }
+        } message: {
+            Text("¿Estás seguro de que quieres cerrar tu sesión?")
+        }
+    }
+    
+    // MARK: - 🚪 LOGOUT FUNCTION
+    private func performLogout() async {
+        isLoggingOut = true
+        
+        // Simular delay de red (puedes remover esto en producción)
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 segundo
+        
+        // Aquí implementarás la lógica real de logout:
+        // 1. Limpiar UserDefaults
+        // 2. Limpiar tokens de autenticación
+        // 3. Resetear el estado de la app
+        // 4. Navegar a la pantalla de login
+        
+        UserDefaults.standard.removeObject(forKey: "user_token")
+        UserDefaults.standard.removeObject(forKey: "user_id")
+        UserDefaults.standard.removeObject(forKey: "user_email")
+        
+        print("🚪 Logout realizado - limpiando datos de sesión")
+        
+        isLoggingOut = false
+        
+        // Aquí deberías navegar de vuelta al login
+        // Esto dependerá de cómo manejes la navegación en tu app
+        // Por ejemplo, podrías usar un @EnvironmentObject para el estado de autenticación
     }
 }
 
-// MARK: - Calendar Grid View Component
+// MARK: - Calendar Grid View Component (sin cambios)
 struct CalendarGridView: View {
     @Binding var selectedDate: Date
     let filter: HomeView.CalendarFilter
@@ -442,7 +545,7 @@ struct CalendarGridView: View {
     }
 }
 
-// MARK: - Selected Day Info View Component
+// MARK: - Selected Day Info View Component (sin cambios)
 struct SelectedDayInfoView: View {
     let selectedDate: Date
     let visits: [HomeView.PendingVisit]
@@ -508,7 +611,7 @@ struct SelectedDayInfoView: View {
     }
 }
 
-// MARK: - Calendar Day Cell Component
+// MARK: - Calendar Day Cell Component (sin cambios)
 struct CalendarDayCell: View {
     let date: Date
     let isSelected: Bool
@@ -617,6 +720,6 @@ struct CalendarDayCell: View {
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView()
-            .previewDisplayName("Redesigned Home with Calendar")
+            .previewDisplayName("Home with Logout")
     }
 }

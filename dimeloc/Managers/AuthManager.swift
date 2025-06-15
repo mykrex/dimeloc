@@ -12,8 +12,7 @@ class AuthManager: ObservableObject {
     private let tokenKey = "dimeloc_auth_token"
     
     init() {
-        // No verificar automáticamente el token al inicializar
-        // El usuario siempre debe hacer login manualmente
+        checkAuthStatus()
     }
     
     // MARK: - Login

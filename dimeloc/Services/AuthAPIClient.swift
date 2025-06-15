@@ -1,10 +1,4 @@
-//
-//  AuthAPIClient.swift
-//  dimeloc
-//
-
 import Foundation
-import SwiftUI
 
 class AuthAPIClient: ObservableObject {
     private let baseURL = "https://dimeloc-backend.onrender.com/api"

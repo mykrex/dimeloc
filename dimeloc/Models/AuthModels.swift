@@ -1,8 +1,3 @@
-//
-//  AuthModels.swift
-//  dimeloc
-//
-
 import Foundation
 
 // MARK: - Request Models
@@ -26,7 +21,7 @@ struct UserData: Codable {
     let rol: String
     let telefono: String?
     let activo: Bool
-    let fechaRegistro: String
+    let fechaRegistro: String?
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
@@ -47,17 +42,17 @@ enum AuthError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidCredentials:
-            return "Correo o contraseña incorrectos"
+            return "Correo o contraseña incorrectos."
         case .networkError:
-            return "Error de conexión. Verifica tu internet"
+            return "Error de conexión. Verifica tu internet."
         case .serverError:
-            return "Error del servidor. Intenta más tarde"
+            return "Error del servidor. Intenta más tarde."
         case .decodingError:
-            return "Error procesando la respuesta"
+            return "Error procesando la respuesta."
         case .invalidURL:
-            return "URL inválida"
+            return "URL inválida."
         case .userNotActive:
-            return "Usuario inactivo. Contacta al administrador"
+            return "Usuario inactivo. Contacta al administrador."
         }
     }
 }

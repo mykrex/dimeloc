@@ -6,60 +6,141 @@
 //
 
 import SwiftUI
+import CoreLocation
+import MapKit
 
 struct TiendaDetailView: View {
     let tienda: Tienda
     @Environment(\.dismiss) private var dismiss
+    @State private var direccion: String = "Cargando dirección..."
+    @State private var comentarios: [Feedback] = []
+    @State private var isLoadingComments = false
+    @StateObject private var apiClient = TiendasAPIClient()
+    
+    // Logo detection para mostrar el ícono correcto
+    private var logoName: String? {
+        let lower = tienda.nombre.lowercased()
+        let patterns: [String: [String]] = [
+            "oxxo":       ["oxxo", "el primer oxxo"],
+            "7eleven":    ["7-eleven", "7 eleven", "7eleven", "7 / eleven"],
+            "heb":        ["h-e-b", "heb"],
+            "modelorama": ["modelorama"],
+            "six":        ["six"],
+            "soriana":    ["soriana"],
+            "walmart":    ["walmart"]
+        ]
+        for (asset, keys) in patterns {
+            if keys.contains(where: { lower.contains($0) }) {
+                return asset
+            }
+        }
+        return nil
+    }
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Barrita de swipe down en la parte superior
+            RoundedRectangle(cornerRadius: 2.5)
+                .fill(Color(.systemGray3))
+                .frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+            
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Header con imagen de fondo
+                    // Header con imagen de fondo neutral y logo
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(LinearGradient(
-                                colors: [tienda.performanceColor.opacity(0.6), tienda.performanceColor.opacity(0.3)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
+                            .fill(Color(.systemGray5)) // Color neutral
                             .frame(height: 140)
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "storefront.fill")
-                                    .foregroundColor(.white)
-                                    .font(.title2)
-                                
-                                Spacer()
-                                
-                                VStack(alignment: .trailing) {
-                                    Text(tienda.performanceText)
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.white.opacity(0.2))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(12)
-                                    
-                                    Text("ID: \(tienda.id)")
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.8))
+                        HStack(spacing: 16) {
+                            // Logo de la tienda a la izquierda
+                            ZStack {
+                                if let asset = logoName {
+                                    Image(asset)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 60, height: 60)
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                                        )
+                                } else {
+                                    Circle()
+                                        .fill(Color(.systemGray4))
+                                        .frame(width: 60, height: 60)
+                                        .overlay(
+                                            Image(systemName: "storefront")
+                                                .font(.system(size: 24, weight: .medium))
+                                                .foregroundColor(.secondary)
+                                        )
                                 }
                             }
                             
-                            Text(tienda.nombre)
-                                .font(.title2)
-                                .bold()
-                                .foregroundColor(.white)
-                                .lineLimit(2)
+                            // Información de la tienda
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(tienda.nombre)
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(.primary)
+                                    .lineLimit(3) // Permitir más líneas para nombres largos
+                                
+                                Text(direccion)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                                
+                                // Horarios del local
+                                HStack(spacing: 8) {
+                                    Image(systemName: "clock")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text("\(tienda.horaAbre ?? "07:00") - \(tienda.horaCierra ?? "22:00")")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                             
-                            Text("Lat: \(tienda.location.latitude, specifier: "%.4f"), Lng: \(tienda.location.longitude, specifier: "%.4f")")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
+                            Spacer()
                         }
                         .padding()
                     }
+                    
+                    // Botón para navegar en Apple Maps
+                    Button(action: {
+                        abrirEnMapas()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            Text("Navegar")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.blue, Color.blue.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                     
                     // Sección de métricas principales
                     VStack(alignment: .leading, spacing: 16) {
@@ -188,19 +269,72 @@ struct TiendaDetailView: View {
                                 )
                             }
                         }
+                        
+                        // Status badge movido aquí, debajo de las recomendaciones
+                        HStack {
+                            Spacer()
+                            Text("Estado actual: \(tienda.performanceText)")
+                                .font(.subheadline)
+                                .bold()
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(tienda.performanceColor.opacity(0.15))
+                                .foregroundColor(tienda.performanceColor)
+                                .cornerRadius(16)
+                            Spacer()
+                        }
+                        .padding(.top, 8)
+                    }
+                    
+                    // Nueva sección de comentarios
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            SectionHeader(title: "Comentarios", icon: "bubble.left.and.bubble.right.fill")
+                            
+                            Spacer()
+                            
+                            if isLoadingComments {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                        
+                        if comentarios.isEmpty && !isLoadingComments {
+                            HStack {
+                                Image(systemName: "bubble.left")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                
+                                Text("No hay comentarios recientes")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        } else {
+                            ForEach(comentarios.prefix(5)) { comentario in
+                                ComentarioCard(feedback: comentario)
+                            }
+                            
+                            if comentarios.count > 5 {
+                                Text("Mostrando 5 de \(comentarios.count) comentarios")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, 8)
+                            }
+                        }
                     }
                 }
                 .padding()
             }
-            .navigationTitle("Detalle de Tienda")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cerrar") {
-                        dismiss()
-                    }
-                }
-            }
+        }
+        .onAppear {
+            obtenerDireccion()
+            cargarComentarios()
         }
     }
     
@@ -222,6 +356,74 @@ struct TiendaDetailView: View {
         if rate <= 3.0 { return .green }
         else if rate <= 4.0 { return .orange }
         else { return .red }
+    }
+    
+    // MARK: - Geocoding para obtener dirección
+    private func obtenerDireccion() {
+        let geocoder = CLGeocoder()
+        let location = CLLocation(latitude: tienda.location.latitude, longitude: tienda.location.longitude)
+        
+        geocoder.reverseGeocodeLocation(location) { placemarks, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error obteniendo dirección: \(error.localizedDescription)")
+                    direccion = "Dirección no disponible"
+                } else if let placemark = placemarks?.first {
+                    // Construir dirección legible
+                    var addressComponents: [String] = []
+                    
+                    if let streetNumber = placemark.subThoroughfare {
+                        addressComponents.append(streetNumber)
+                    }
+                    if let streetName = placemark.thoroughfare {
+                        addressComponents.append(streetName)
+                    }
+                    if let locality = placemark.locality {
+                        addressComponents.append(locality)
+                    }
+                    if let adminArea = placemark.administrativeArea {
+                        addressComponents.append(adminArea)
+                    }
+                    
+                    direccion = addressComponents.isEmpty ? "Dirección no disponible" : addressComponents.joined(separator: ", ")
+                } else {
+                    direccion = "Dirección no disponible"
+                }
+            }
+        }
+    }
+    
+    // MARK: - Cargar comentarios
+    private func cargarComentarios() {
+        isLoadingComments = true
+        
+        Task {
+            do {
+                let feedbacks = try await apiClient.obtenerFeedback(tiendaId: tienda.id)
+                DispatchQueue.main.async {
+                    self.comentarios = feedbacks.sorted { $0.fecha > $1.fecha } // Más recientes primero
+                    self.isLoadingComments = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("Error cargando comentarios: \(error.localizedDescription)")
+                    self.comentarios = []
+                    self.isLoadingComments = false
+                }
+            }
+        }
+    }
+    
+    // MARK: - Abrir en Apple Maps
+    private func abrirEnMapas() {
+        let coordinate = CLLocationCoordinate2D(latitude: tienda.location.latitude, longitude: tienda.location.longitude)
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = tienda.nombre
+        
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
     }
 }
 
@@ -245,7 +447,6 @@ struct SectionHeader: View {
         }
     }
 }
-
 
 struct RecommendationCard: View {
     let title: String
@@ -311,5 +512,93 @@ struct RecommendationCard: View {
         .padding()
         .background(priority.color.opacity(0.05))
         .cornerRadius(8)
+    }
+}
+
+// MARK: - Componente para mostrar comentarios
+
+struct ComentarioCard: View {
+    let feedback: Feedback
+    
+    private var urgencyColor: Color {
+        switch feedback.urgencia.lowercased() {
+        case "alta": return .red
+        case "media": return .orange
+        case "baja": return .green
+        case "critica": return .purple
+        default: return .gray
+        }
+    }
+    
+    private var categoryIcon: String {
+        switch feedback.categoria.lowercased() {
+        case "infraestructura": return "wrench.and.screwdriver"
+        case "inventario": return "shippingbox"
+        case "servicio": return "person.2"
+        case "limpieza": return "sparkles"
+        case "personal": return "person.badge.key"
+        default: return "ellipsis.circle"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: categoryIcon)
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    
+                    Text(feedback.categoria.capitalized)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
+                
+                Spacer()
+                
+                Text(feedback.urgencia.capitalized)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(urgencyColor.opacity(0.2))
+                    .foregroundColor(urgencyColor)
+                    .cornerRadius(4)
+            }
+            
+            Text(feedback.comentario)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .lineLimit(3)
+            
+            HStack {
+                Text(feedback.colaborador)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text(formatearFecha(feedback.fecha))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(12)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+    
+    private func formatearFecha(_ fechaString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: fechaString) else { return fechaString }
+        
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .short
+        displayFormatter.timeStyle = .short
+        displayFormatter.locale = Locale(identifier: "es_ES")
+        
+        return displayFormatter.string(from: date)
     }
 }

@@ -6,6 +6,7 @@ struct LoginView: View {
     @StateObject private var authManager = AuthManager()
     @State private var email: String = ""
     @State private var password: String = ""
+    @State private var showPassword: Bool = false
 
     var body: some View {
         VStack(alignment: .center, spacing: 60) {
@@ -17,8 +18,8 @@ struct LoginView: View {
 
             VStack(alignment: .center, spacing: 30) {
                 VStack(alignment: .trailing, spacing: 12) {
-                    inputField(title: "Correo", text: $email, placeholder: "Ingresa tu correo", isSecure: false)
-                    inputField(title: "Contraseña", text: $password, placeholder: "Ingresa tu contraseña", isSecure: true)
+                    inputField(title: "correo", text: $email, placeholder: "Ingresa tu correo", isSecure: false)
+                    inputField(title: "contraseña", text: $password, placeholder: "Ingresa tu contraseña", isSecure: true)
 
                     if let error = authManager.errorMessage {
                         Text(error)
@@ -48,7 +49,7 @@ struct LoginView: View {
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .background(Color(red: 1, green: 0.29, blue: 0.2))
-                    .cornerRadius(AppConstants.UI.CornerRadius.xl)
+                    .cornerRadius(AppConstants.UI.CornerRadius.large)
                 }
                 .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
                 .opacity(authManager.isLoading || email.isEmpty || password.isEmpty ? 0.6 : 1.0)
@@ -70,13 +71,13 @@ struct LoginView: View {
 
         // Validaciones locales (mantener la misma lógica visual)
         if trimmedEmail.isEmpty && trimmedPassword.isEmpty {
-            authManager.errorMessage = "Necesitas ingresar tus datos."
+            authManager.errorMessage = "necesitas ingresar tus datos."
             return
         } else if trimmedEmail.isEmpty {
-            authManager.errorMessage = "Falta el correo electrónico."
+            authManager.errorMessage = "falta el correo electrónico."
             return
         } else if trimmedPassword.isEmpty {
-            authManager.errorMessage = "Falta la contraseña."
+            authManager.errorMessage = "falta la contraseña."
             return
         }
 
@@ -92,7 +93,7 @@ struct LoginView: View {
     private func inputField(title: String, text: Binding<String>, placeholder: String, isSecure: Bool) -> some View {
         VStack(alignment: .trailing, spacing: 6) {
             HStack(alignment: .center, spacing: 6) {
-                Text(title)
+                Text(title.capitalized) // Capitalizar solo para mostrar
                     .font(.system(size: 14, weight: .bold))
                     .kerning(0.14)
                     .foregroundColor(Color(red: 0.1, green: 0.08, blue: 0.14))
@@ -102,21 +103,44 @@ struct LoginView: View {
 
             HStack(alignment: .center, spacing: 8) {
                 if isSecure {
-                    SecureField("", text: text, prompt: Text(placeholder)
-                        .font(.system(size: 14))
-                        .kerning(0.14)
-                        .foregroundColor(AppConstants.UI.Colors.secondary))
+                    if showPassword {
+                        TextField("", text: text, prompt: Text(placeholder)
+                            .font(.system(size: 14))
+                            .kerning(0.14)
+                            .foregroundColor(Color(.systemGray)))
+                            .textCase(.lowercase) // Fuerza minúsculas en contraseña visible
+                            .autocapitalization(.none) // Desactiva autocapitalización
+                    } else {
+                        SecureField("", text: text, prompt: Text(placeholder)
+                            .font(.system(size: 14))
+                            .kerning(0.14)
+                            .foregroundColor(Color(.systemGray)))
+                            .textCase(.lowercase) // Fuerza minúsculas en contraseña
+                            .autocapitalization(.none) // Desactiva autocapitalización
+                    }
+                    
+                    // Botón del ojo para mostrar/ocultar contraseña
+                    Button(action: {
+                        showPassword.toggle()
+                    }) {
+                        Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(showPassword ? Color(red: 1, green: 0.29, blue: 0.2) : Color(.systemGray2))
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     TextField("", text: text, prompt: Text(placeholder)
                         .font(.system(size: 14))
                         .kerning(0.14)
-                        .foregroundColor(AppConstants.UI.Colors.secondary))
+                        .foregroundColor(Color(.systemGray)))
+                        .textCase(.lowercase) // Fuerza minúsculas en el texto del usuario
+                        .autocapitalization(.none) // Desactiva autocapitalización
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .background(AppConstants.UI.Colors.surface)
+            .background(Color(.systemBackground))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)

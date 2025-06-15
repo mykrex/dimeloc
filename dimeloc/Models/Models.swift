@@ -20,6 +20,13 @@ struct Tienda: Codable, Identifiable {
     private let _outOfStock: Double?
     private let _complaintResolutionTimeHrs: Double?
     
+    // ✅ CAMPOS RESTAURADOS para TiendaDetailView
+    let horaAbre: String?
+    let horaCierra: String?
+    let direccion: String?
+    let colaboradorAsignado: String?
+    let fechaUltimaVisita: String?
+    
     // Propiedades calculadas con valores seguros
     var nps: Double {
         guard let value = _nps, value.isFinite else { return 0.0 }
@@ -46,6 +53,36 @@ struct Tienda: Codable, Identifiable {
         return value
     }
     
+    // ✅ Propiedades de conveniencia para TiendaDetailView
+    var horario: String {
+        guard let abre = horaAbre, let cierra = horaCierra else {
+            return "Horario no disponible"
+        }
+        if abre == "24hrs" || abre.lowercased().contains("24") {
+            return "24 horas"
+        }
+        return "\(abre) - \(cierra)"
+    }
+    
+    var colaborador: String {
+        return colaboradorAsignado?.components(separatedBy: "@").first ?? "Sin asignar"
+    }
+    
+    var ultimaVisita: String {
+        guard let fecha = fechaUltimaVisita else {
+            return "Sin visitas registradas"
+        }
+        
+        if let date = ISO8601DateFormatter().date(from: fecha) {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.locale = Locale(identifier: "es_ES")
+            return formatter.string(from: date)
+        }
+        
+        return fecha
+    }
+    
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case nombre
@@ -55,6 +92,11 @@ struct Tienda: Codable, Identifiable {
         case _damageRate = "damage_rate"
         case _outOfStock = "out_of_stock"
         case _complaintResolutionTimeHrs = "complaint_resolution_time_hrs"
+        case horaAbre = "hora_abre"
+        case horaCierra = "hora_cierra"
+        case direccion
+        case colaboradorAsignado = "colaborador_asignado"
+        case fechaUltimaVisita = "fecha_ultima_visita"
     }
 }
 
@@ -70,6 +112,12 @@ struct Location: Codable {
     var latitude: Double {
         guard let value = _latitude, value.isFinite else { return 25.6866 } // Default Monterrey
         return value
+    }
+    
+    // ✅ AGREGADO: Constructor personalizado para TenderoFeedbackView
+    init(longitude: Double = -100.3161, latitude: Double = 25.6866) {
+        self._longitude = longitude
+        self._latitude = latitude
     }
     
     enum CodingKeys: String, CodingKey {
@@ -118,7 +166,7 @@ struct NuevoFeedback: Codable {
     let urgencia: String
 }
 
-// MARK: - Feedback Bidireccional (NUEVO)
+// MARK: - ✅ NUEVAS ESTRUCTURAS PARA FEEDBACK BIDIRECCIONAL (para TenderoFeedbackView)
 struct FeedbackTendero: Codable, Identifiable {
     let id: String
     let visitaId: String?
@@ -520,7 +568,7 @@ struct Notificacion: Codable, Identifiable {
     let datos: [String: String]?
 }
 
-// MARK: - Extensiones de UI para Tienda
+// MARK: - ✅ EXTENSIONES ACTUALIZADAS para TenderoFeedbackView
 extension Tienda {
     var coordinate: CLLocationCoordinate2D {
         let lat = location.latitude
@@ -559,6 +607,60 @@ extension Tienda {
         } else {
             return "Necesita atención"
         }
+    }
+    
+    // ✅ AGREGADO: Función para preview compatible con TenderoFeedbackView
+    static func preview() -> Tienda {
+        return Tienda(
+            id: 1,
+            nombre: "OXXO Centro",
+            location: Location(longitude: -100.3161, latitude: 25.6866),
+            _nps: 45.0,
+            _fillfoundrate: 95.0,
+            _damageRate: 0.8,
+            _outOfStock: 2.5,
+            _complaintResolutionTimeHrs: 24.0,
+            horaAbre: "06:00",
+            horaCierra: "23:00",
+            direccion: "Av. Universidad 123, Centro, Monterrey",
+            colaboradorAsignado: "maria.martinez@arcacontinental.mx",
+            fechaUltimaVisita: "2025-06-10T10:30:00Z"
+        )
+    }
+    
+    // ✅ AGREGADO: Validación para TenderoFeedbackView
+    var isValidId: Bool {
+        return id > 0
+    }
+    
+    // Validar que las métricas no sean NaN
+    var hasValidMetrics: Bool {
+        return nps.isFinite &&
+               fillfoundrate.isFinite &&
+               damageRate.isFinite &&
+               outOfStock.isFinite &&
+               complaintResolutionTimeHrs.isFinite
+    }
+    
+    // Versión segura para usar en UI
+    var safeNps: Double {
+        guard nps.isFinite else { return 0.0 }
+        return max(0, min(100, nps))
+    }
+    
+    var safeFillfoundrate: Double {
+        guard fillfoundrate.isFinite else { return 0.0 }
+        return max(0, min(100, fillfoundrate))
+    }
+    
+    var safeDamageRate: Double {
+        guard damageRate.isFinite else { return 0.0 }
+        return max(0, damageRate)
+    }
+    
+    var safeOutOfStock: Double {
+        guard outOfStock.isFinite else { return 0.0 }
+        return max(0, outOfStock)
     }
 }
 

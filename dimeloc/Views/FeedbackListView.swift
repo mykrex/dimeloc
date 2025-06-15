@@ -5,6 +5,7 @@
 //  Created by Maria Martinez on 14/06/25.
 //
 import SwiftUI
+
 // MARK: - Enhanced FeedbackListView with sleek design improvements
 struct FeedbackListView: View {
     // MARK: - App accent color
@@ -17,6 +18,11 @@ struct FeedbackListView: View {
     @State private var selectedTienda: Tienda?
     @State private var showingFeedback = false
     @State private var searchText = ""
+    
+    // ✅ NUEVOS ESTADOS para manejar la selección de tipo de feedback
+    @State private var showingFeedbackTypeSheet = false
+    @State private var showingTenderoFeedback = false
+    @State private var showingColaboradorFeedback = false
 
     // Patrón para logos
     private let patterns: [String: [String]] = [
@@ -177,8 +183,9 @@ struct FeedbackListView: View {
                             LazyVStack(spacing: 8) {
                                 ForEach(filteredTiendas) { tienda in
                                     TiendaFeedbackRow(tienda: tienda) {
+                                        // ✅ CAMBIO: Mostrar selector de tipo de feedback
                                         selectedTienda = tienda
-                                        showingFeedback = true
+                                        showingFeedbackTypeSheet = true
                                     }
                                 }
                             }
@@ -194,11 +201,37 @@ struct FeedbackListView: View {
                 Spacer(minLength: 0)
             }
             .background(Color(.systemGroupedBackground))
-            .sheet(isPresented: $showingFeedback) {
+            
+            // ✅ NUEVO: ActionSheet para seleccionar tipo de feedback
+            .confirmationDialog("¿Qué tipo de feedback quieres agregar?", isPresented: $showingFeedbackTypeSheet, titleVisibility: .visible) {
+                Button("🏪 Feedback del Tendero") {
+                    showingTenderoFeedback = true
+                }
+                
+                Button("👤 Feedback del Colaborador") {
+                    showingColaboradorFeedback = true
+                }
+                
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                if let tienda = selectedTienda {
+                    Text("Selecciona el tipo de feedback para \(tienda.nombre)")
+                }
+            }
+            
+            // ✅ NUEVOS: Sheets para cada tipo de feedback
+            .sheet(isPresented: $showingTenderoFeedback) {
+                if let tienda = selectedTienda {
+                    TenderoFeedbackView(tienda: tienda, visitaId: nil)
+                }
+            }
+            
+            .sheet(isPresented: $showingColaboradorFeedback) {
                 if let tienda = selectedTienda {
                     FeedbackView(tienda: tienda)
                 }
             }
+            
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") { errorMessage = nil }
             } message: {
@@ -221,6 +254,7 @@ struct FeedbackListView: View {
         isLoading = false
     }
 }
+
 // MARK: - Ultra Minimal TiendaFeedbackRow with enhanced design
 struct TiendaFeedbackRow: View {
     // MARK: - App colors
@@ -328,9 +362,9 @@ struct TiendaFeedbackRow: View {
                 .buttonStyle(PlainButtonStyle())
                 .scaleEffect(isPressed ? 0.95 : 1.0)
                 
-                // Feedback button
+                // ✅ CAMBIO: Botón de feedback actualizado con nuevo ícono
                 Button(action: onFeedbackTap) {
-                    Image(systemName: "plus.bubble")
+                    Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(width: 40, height: 40)
@@ -338,13 +372,13 @@ struct TiendaFeedbackRow: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [softBlue.opacity(0.9), softBlue],
+                                        colors: [Color.purple.opacity(0.8), Color.purple],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
                         )
-                        .shadow(color: softBlue.opacity(0.2), radius: 1, x: 0, y: 0.5)
+                        .shadow(color: Color.purple.opacity(0.3), radius: 1, x: 0, y: 0.5)
                 }
                 .buttonStyle(PlainButtonStyle())
                 .scaleEffect(isPressed ? 0.95 : 1.0)
@@ -435,9 +469,9 @@ extension FeedbackListView {
         .animation(.easeInOut(duration: 0.2), value: searchText.isEmpty)
     }
 }
+
 struct FeedbackListView_Previews: PreviewProvider {
     static var previews: some View {
         FeedbackListView()
     }
 }
-

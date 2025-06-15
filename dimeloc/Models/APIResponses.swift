@@ -49,18 +49,7 @@ struct TiendasProblematicasResponse: Codable {
     let error: String?
 }
 
-// MARK: - Respuestas de Autenticación
-struct LoginRequest: Codable {
-    let email: String
-    let password: String
-}
 
-struct LoginResponse: Codable {
-    let success: Bool
-    let user: Usuario?
-    let error: String?
-    let message: String?
-}
 
 struct ProfileResponse: Codable {
     let success: Bool
