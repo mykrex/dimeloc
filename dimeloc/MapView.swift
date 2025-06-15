@@ -30,22 +30,33 @@ struct MapView: View {
     }
 
     private var displayedTiendas: [Tienda] {
+      // first, category filter
+      let byCategory: [Tienda]
       switch selectedFilter {
       case .total:
-        return tiendas
+        byCategory = tiendas
       case .excelentes:
-        return tiendas.filter { $0.nps >= 50 && $0.damageRate < 0.5 && $0.outOfStock < 3 }
+        byCategory = tiendas.filter { $0.nps >= 50 && $0.damageRate < 0.5 && $0.outOfStock < 3 }
       case .bien:
-         return tiendas.filter { t in
-           // mid-range: not excelentes and not problemáticas
-           return t.nps >= 30 && t.nps < 50
-               && t.damageRate <= 1
-               && t.outOfStock <= 4
-         }
+        byCategory = tiendas.filter { t in
+          t.nps >= 30 && t.nps < 50
+          && t.damageRate <= 1
+          && t.outOfStock <= 4
+        }
       case .problematicas:
-        return tiendas.filter { $0.nps < 30 || $0.damageRate > 1 || $0.outOfStock > 4 }
+        byCategory = tiendas.filter { $0.nps < 30 || $0.damageRate > 1 || $0.outOfStock > 4 }
       }
+
+    // then, if the user has typed something, further narrow down by name:
+     guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else {
+       return byCategory
+     }
+     return byCategory.filter {
+       $0.nombre
+         .localizedCaseInsensitiveContains(searchText.trimmingCharacters(in: .whitespaces))
+     }
     }
+
 
     
     var body: some View {
@@ -79,67 +90,111 @@ struct MapView: View {
                 // Search
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
-                    TextField("Buscar tienda", text: $searchText)
-                        .disableAutocorrection(true)
+                        .foregroundColor(Color("dlOrange"))
+                    TextField(
+                        "",
+                        text: $searchText,
+                        prompt: Text("Buscar tienda")
+                            .foregroundColor(Color("dlOrange"))
+                    )
+                    .disableAutocorrection(true)
+                    .foregroundColor(Color("dlOrange"))  // this now only affects the typed text
+                    
                 }
                 .padding(12)
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                .shadow(radius: 5)
+                .shadow(radius: 1)
                 .padding(.horizontal)
+                
+                // right under your search HStack…
+                if !searchText.isEmpty {
+                  // container that grows to fit, up to 250pt tall
+                  ScrollView {
+                    VStack(spacing: 0) {
+                      if displayedTiendas.isEmpty {
+                        Text("No se encontró ninguna tienda")
+                          .foregroundColor(.secondary)
+                          .padding()
+                      } else {
+                        ForEach(displayedTiendas) { tienda in
+                          Button {
+                            // zoom + show detail
+                          } label: {
+                            HStack {
+                              Text(tienda.nombre)
+                              Spacer()
+                            }
+                            .padding()
+                          }
+                          // draw a divider except after the last row
+                          if tienda.id != displayedTiendas.last?.id {
+                            Divider()
+                          }
+                        }
+                      }
+                    }
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                  }
+                  .frame(maxHeight: 250)   // *only* cap the max height
+                }
 
                 // Stats
-                HStack() {
-                    Button { selectedFilter = .total } label: {
-                        StatsCard(title: "Total",         value: stats.total,        color: .blue)
-                            .frame(maxWidth: .infinity)
-                            .padding(12)
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                            .shadow(radius: 5)
-                            .overlay(RoundedRectangle(cornerRadius:25)
-                                .stroke(selectedFilter == .total ? Color.accentColor : .clear, lineWidth:3))
+                if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    HStack() {
+                        Button { selectedFilter = .total } label: {
+                            StatsCard(title: "Total",         value: stats.total,        color: .blue)
+                                .frame(maxWidth: .infinity)
+                                .padding(12)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+                                .shadow(radius: 1)
+                                .overlay(RoundedRectangle(cornerRadius:25)
+                                    .stroke(selectedFilter == .total ? Color.accentColor : .clear, lineWidth:3))
+                        }
+                        
+                        Button { selectedFilter = .excelentes } label: {
+                            StatsCard(title: "Excelentes",    value: stats.excelentes,   color: .green)
+                                .fixedSize()
+                                .padding(12)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+                                .shadow(radius: 1)
+                                .overlay(RoundedRectangle(cornerRadius:25)
+                                    .stroke(selectedFilter == .excelentes ? Color.accentColor : .clear, lineWidth:3))
+                        }
+                        
+                        Button { selectedFilter = .bien } label: {
+                            StatsCard(title: "Bien",          value: stats.bien,         color: .yellow)
+                                .frame(maxWidth: .infinity)
+                                .padding(12)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+                                .shadow(radius: 1)
+                                .frame(maxWidth: .infinity)
+                                .overlay(RoundedRectangle(cornerRadius:25)
+                                    .stroke(selectedFilter == .bien ? Color.accentColor : .clear, lineWidth:3))
+                        }
+                        
+                        Button { selectedFilter = .problematicas } label: {
+                            StatsCard(title: "Problemáticas", value: stats.problematicas, color: .red)
+                                .fixedSize()
+                                .padding(12)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+                                .shadow(radius: 1)
+                                .overlay(RoundedRectangle(cornerRadius:25)
+                                    .stroke(selectedFilter == .problematicas ? Color.accentColor : .clear, lineWidth:3))
+                        }
+                        
                     }
                     
-                    Button { selectedFilter = .excelentes } label: {
-                    StatsCard(title: "Excelentes",    value: stats.excelentes,   color: .green)
-                        .fixedSize()
-                        .padding(12)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                        .shadow(radius: 5)
-                        .overlay(RoundedRectangle(cornerRadius:25)
-                            .stroke(selectedFilter == .excelentes ? Color.accentColor : .clear, lineWidth:3))
+                    .padding(12)
+                    // no background/shadow on the HStack itself
+                    
                 }
-
-                    Button { selectedFilter = .bien } label: {
-                    StatsCard(title: "Bien",          value: stats.bien,         color: .yellow)
-                        .frame(maxWidth: .infinity)
-                        .padding(12)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                        .shadow(radius: 5)
-                        .frame(maxWidth: .infinity)
-                        .overlay(RoundedRectangle(cornerRadius:25)
-                            .stroke(selectedFilter == .bien ? Color.accentColor : .clear, lineWidth:3))
-                }
-
-                    Button { selectedFilter = .problematicas } label: {
-                    StatsCard(title: "Problemáticas", value: stats.problematicas, color: .red)
-                        .fixedSize()
-                        .padding(12)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                        .shadow(radius: 5)
-                        .overlay(RoundedRectangle(cornerRadius:25)
-                            .stroke(selectedFilter == .problematicas ? Color.accentColor : .clear, lineWidth:3))
-                }
-
-                }
-                .padding(12)
-                // no background/shadow on the HStack itself
-
             }
             .padding(.trailing)
             // 3) Detail‐loading overlay
@@ -180,6 +235,11 @@ struct MapView: View {
         }
         .onChange(of: selectedFilter) { _ in            adjustRegion(to: displayedTiendas)
         }
+        // somewhere in your view modifiers, e.g. just after onAppear:
+        .onChange(of: searchText) { _ in
+          adjustRegion(to: displayedTiendas)
+        }
+
     }
 
     private func cargarTiendas() async {

@@ -20,7 +20,6 @@ struct MainView: View {
                 }
             }
             BottomNavBar(selectedTab: $selectedTab)
-                .padding(.bottom, 20)
         }
     }
 }
@@ -37,15 +36,14 @@ struct BottomNavBar: View {
         .padding()
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 25.0, style: .continuous))
-        .shadow(radius: 5)
+        .shadow(radius: 1)
     }
 
     private func navButton(icon: String, tab: MainView.Tab) -> some View {
         Button(action: { selectedTab = tab }) {
             Image(systemName: icon + (selectedTab == tab ? ".fill" : ""))
                 .font(.title2)
-                .foregroundColor(selectedTab == tab ? .accentColor : .gray)
-        }
+            .foregroundColor(selectedTab == tab ? Color("dlOrange") : .gray)        }
     }
 }
 
