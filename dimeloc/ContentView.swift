@@ -1,21 +1,29 @@
-//
-//  ContentView.swift
-//  dimeloc
-//
-//  Created by Maria Martinez on 14/06/25.
-// Test de cambio - maru
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var showSplash = true
+    @State private var loggedIn = false
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+            } else if !loggedIn {
+                LoginView(onLogin: { loggedIn = true })
+                    .transition(.opacity)
+            } else {
+                MainView()
+                    .transition(.opacity)
+            }
         }
-        .padding()
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    showSplash = false
+                }
+            }
+        }
     }
 }
 
