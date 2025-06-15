@@ -2,7 +2,7 @@
 //  TiendasAPIClient.swift
 //  dimeloc
 //
-//  Created by Maria Martinez on 14/06/25.
+//  APIClient limpio sin errores de compilación
 //
 
 import Foundation
@@ -11,18 +11,45 @@ import SwiftUI
 class TiendasAPIClient: ObservableObject {
     private let baseURL = "https://dimeloc-backend.onrender.com/api"
     
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        return URLSession(configuration: config)
+    }()
+    
+    // MARK: - Métodos Básicos que SÍ funcionan
+    
     func obtenerTiendas() async throws -> [Tienda] {
         guard let url = URL(string: "\(baseURL)/tiendas") else {
             throw APIError.invalidURL
         }
         
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try JSONDecoder().decode(TiendaResponse.self, from: data)
+        let (data, response) = try await session.data(from: url)
         
-        if response.success {
-            return response.data
-        } else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        print("📡 Status obtenerTiendas: \(httpResponse.statusCode)")
+        
+        if httpResponse.statusCode != 200 {
             throw APIError.serverError
+        }
+        
+        do {
+            let apiResponse = try JSONDecoder().decode(TiendaResponse.self, from: data)
+            
+            if apiResponse.success {
+                print("✅ Obtenidas \(apiResponse.data.count) tiendas")
+                return apiResponse.data
+            } else {
+                print("❌ Error del servidor: \(apiResponse.error ?? "Error desconocido")")
+                throw APIError.serverError
+            }
+        } catch {
+            print("❌ Error decodificando tiendas: \(error)")
+            throw APIError.decodingError
         }
     }
     
@@ -31,17 +58,23 @@ class TiendasAPIClient: ObservableObject {
             throw APIError.invalidURL
         }
         
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try JSONDecoder().decode(TiendaResponse.self, from: data)
+        let (data, response) = try await session.data(from: url)
         
-        if response.success {
-            return response.data
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw APIError.serverError
+        }
+        
+        let apiResponse = try JSONDecoder().decode(TiendaResponse.self, from: data)
+        
+        if apiResponse.success {
+            print("⚠️ Obtenidas \(apiResponse.data.count) tiendas problemáticas")
+            return apiResponse.data
         } else {
             throw APIError.serverError
         }
     }
     
-    // MTODOS PARA FEEDBACK
     func enviarFeedback(tiendaId: Int, feedback: NuevoFeedback) async throws -> FeedbackSubmissionResponse {
         guard let url = URL(string: "\(baseURL)/tiendas/\(tiendaId)/feedback") else {
             throw APIError.invalidURL
@@ -51,147 +84,122 @@ class TiendasAPIClient: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let encoder = JSONEncoder()
-        request.httpBody = try encoder.encode(feedback)
+        request.httpBody = try JSONEncoder().encode(feedback)
         
-        print("📤 Enviando feedback a: \(url)")
-        print("📝 Payload: \(String(data: request.httpBody ?? Data(), encoding: .utf8) ?? "Error encoding")")
+        print("📤 Enviando feedback a tienda \(tiendaId)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         
-        // Verificar status code HTTP
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📡 Response status: \(httpResponse.statusCode)")
-            
-            if httpResponse.statusCode != 200 {
-                print("❌ HTTP Error: \(httpResponse.statusCode)")
-                throw APIError.serverError
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            print("❌ Error HTTP enviando feedback")
+            throw APIError.serverError
+        }
+        
+        let submissionResponse = try JSONDecoder().decode(FeedbackSubmissionResponse.self, from: data)
+        
+        if submissionResponse.success {
+            print("✅ Feedback enviado correctamente")
+            if let analysis = submissionResponse.analysis, analysis.generated {
+                print("🤖 Análisis generado - Prioridad: \(analysis.priority ?? "N/A")")
             }
         }
         
-        // Debug: Ver respuesta completa del servidor
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("🔍 Respuesta del servidor:")
-            print(responseString)
-        }
-        
-        // Intentar decodificar la respuesta
-        do {
-            let submissionResponse = try JSONDecoder().decode(FeedbackSubmissionResponse.self, from: data)
-            
-            if submissionResponse.success {
-                print("✅ Feedback enviado correctamente")
-                if let analysis = submissionResponse.analysis {
-                    print("🤖 Análisis generado: \(analysis.generated ? "Sí" : "No")")
-                    if analysis.generated {
-                        print("🎯 Prioridad: \(analysis.priority ?? "N/A")")
-                        print("📝 Resumen: \(analysis.summary ?? "N/A")")
-                    }
-                }
-                return submissionResponse
-            } else {
-                print("❌ Error del servidor: \(submissionResponse.message ?? "Error desconocido")")
-                throw APIError.serverError
-            }
-        } catch DecodingError.keyNotFound(let key, let context) {
-            print("❌ Error de decodificación - Campo faltante: \(key)")
-            print("📍 Context: \(context)")
-            print("📄 JSON recibido: \(String(data: data, encoding: .utf8) ?? "No data")")
-            throw APIError.decodingError
-        } catch DecodingError.typeMismatch(let type, let context) {
-            print("❌ Error de tipo en decodificación: \(type)")
-            print("📍 Context: \(context)")
-            throw APIError.decodingError
-        } catch {
-            print("❌ Error general de decodificación: \(error)")
-            throw APIError.decodingError
-        }
+        return submissionResponse
     }
-        
-        func obtenerFeedback(tiendaId: Int) async throws -> [Feedback] {
-            guard let url = URL(string: "\(baseURL)/tiendas/\(tiendaId)/feedback") else {
-                throw APIError.invalidURL
-            }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(FeedbackResponse.self, from: data)
-            
-            if response.success {
-                print("📊 Obtenidos \(response.data.count) comentarios para tienda \(tiendaId)")
-                return response.data
-            } else {
-                throw APIError.serverError
-            }
-        }
-        
-        func obtenerInsights(tiendaId: Int) async throws -> [GeminiInsight] {
-            guard let url = URL(string: "\(baseURL)/tiendas/\(tiendaId)/insights") else {
-                throw APIError.invalidURL
-            }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(InsightsResponse.self, from: data)
-            
-            if response.success {
-                print("🤖 Obtenidos \(response.data.count) insights para tienda \(tiendaId)")
-                return response.data
-            } else {
-                throw APIError.serverError
-            }
-        }
-        
-        func obtenerTiendasConAlertas() async throws -> [TiendaProblematica] {
-            guard let url = URL(string: "\(baseURL)/insights/problematicas") else {
-                throw APIError.invalidURL
-            }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(TiendasProblematicasResponse.self, from: data)
-            
-            if response.success {
-                print("⚠️ Encontradas \(response.data.count) tiendas con alertas")
-                return response.data
-            } else {
-                throw APIError.serverError
-            }
-        }
-        
-        func analizarTiendaManualmente(tiendaId: Int) async throws -> GeminiAnalysis {
-            guard let url = URL(string: "\(baseURL)/tiendas/\(tiendaId)/analyze") else {
-                throw APIError.invalidURL
-            }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let (data, _) = try await URLSession.shared.data(for: request)
-            let response = try JSONDecoder().decode(AnalysisResponse.self, from: data)
-            
-            if response.success {
-                print("🔍 Análisis manual completado para tienda \(tiendaId)")
-                return response.analysis
-            } else {
-                throw APIError.serverError
-            }
-        }
-        
-        // MÉTODO DE PRUEBA
-    func testGemini() async throws -> String {
-        guard let url = URL(string: "\(baseURL)/test-gemini") else {
+    
+    func obtenerFeedback(tiendaId: Int) async throws -> [Feedback] {
+        guard let url = URL(string: "\(baseURL)/tiendas/\(tiendaId)/feedback") else {
             throw APIError.invalidURL
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(GeminiTestResponse.self, from: data)
+        let (data, _) = try await session.data(from: url)
+        let response = try JSONDecoder().decode(FeedbackResponse.self, from: data)
         
         if response.success {
-            return response.analysis
+            print("📊 Obtenidos \(response.data.count) comentarios para tienda \(tiendaId)")
+            return response.data
         } else {
             throw APIError.serverError
+        }
+    }
+    
+    func obtenerInsights(tiendaId: Int) async throws -> [GeminiInsight] {
+        guard let url = URL(string: "\(baseURL)/tiendas/\(tiendaId)/insights") else {
+            throw APIError.invalidURL
+        }
+        
+        let (data, _) = try await session.data(from: url)
+        let response = try JSONDecoder().decode(InsightsResponse.self, from: data)
+        
+        if response.success {
+            print("🤖 Obtenidos \(response.data.count) insights para tienda \(tiendaId)")
+            return response.data
+        } else {
+            throw APIError.serverError
+        }
+    }
+    
+    func healthCheck() async throws -> Bool {
+        guard let url = URL(string: "\(baseURL)/health") else {
+            throw APIError.invalidURL
+        }
+        
+        do {
+            let (data, response) = try await session.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return false
+            }
+            
+            let healthResponse = try JSONDecoder().decode(BasicResponse.self, from: data)
+            return healthResponse.success
+        } catch {
+            print("❌ Health check falló: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - Método de testing simple
+    func quickTest() async {
+        print("🧪 === INICIANDO TEST RÁPIDO ===")
+        
+        // Test 1: Health Check
+        print("\n1. Health Check...")
+        do {
+            let isHealthy = try await healthCheck()
+            print(isHealthy ? "✅ Health Check: OK" : "❌ Health Check: FAIL")
+        } catch {
+            print("❌ Health Check Error: \(error.localizedDescription)")
+        }
+        
+        // Test 2: Obtener tiendas
+        print("\n2. Obteniendo tiendas...")
+        do {
+            let tiendas = try await obtenerTiendas()
+            print("✅ Tiendas obtenidas: \(tiendas.count)")
+            
+            if let primera = tiendas.first {
+                print("   📍 Primera tienda: \(primera.nombre)")
+                print("   📊 NPS: \(primera.nps)")
+            }
+        } catch {
+            print("❌ Error obteniendo tiendas: \(error.localizedDescription)")
+        }
+        
+        print("\n🏁 === TEST RÁPIDO COMPLETADO ===")
+    }
+    
+    func getConnectionInfo() async -> (isConnected: Bool, latency: TimeInterval?) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        do {
+            let isHealthy = try await healthCheck()
+            let latency = CFAbsoluteTimeGetCurrent() - startTime
+            return (isHealthy, latency)
+        } catch {
+            return (false, nil)
         }
     }
 }

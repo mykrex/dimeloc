@@ -48,7 +48,7 @@ struct LoginView: View {
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .background(Color(red: 1, green: 0.29, blue: 0.2))
-                    .cornerRadius(Constants.Style.RadiusFull)
+                    .cornerRadius(AppConstants.UI.CornerRadius.xl)
                 }
                 .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
                 .opacity(authManager.isLoading || email.isEmpty || password.isEmpty ? 0.6 : 1.0)
@@ -105,23 +105,23 @@ struct LoginView: View {
                     SecureField("", text: text, prompt: Text(placeholder)
                         .font(.system(size: 14))
                         .kerning(0.14)
-                        .foregroundColor(Constants.Style.NeutralN400))
+                        .foregroundColor(AppConstants.UI.Colors.secondary))
                 } else {
                     TextField("", text: text, prompt: Text(placeholder)
                         .font(.system(size: 14))
                         .kerning(0.14)
-                        .foregroundColor(Constants.Style.NeutralN400))
+                        .foregroundColor(AppConstants.UI.Colors.secondary))
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .background(Constants.Style.ShadeWhite)
+            .background(AppConstants.UI.Colors.surface)
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .inset(by: 0.75)
-                    .stroke(Constants.Style.NeutralN200, lineWidth: 1.5)
+                    .stroke(Color(.systemGray4), lineWidth: 1.5)
             )
         }
     }
