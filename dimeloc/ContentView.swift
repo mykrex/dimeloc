@@ -1,29 +1,29 @@
-//
-//  ContentView.swift
-//  dimeloc
-//
-//  Created by Maria Martinez on 14/06/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var showSplash = true
+    @State private var loggedIn = false
+
     var body: some View {
-        TabView {
-            
-            FeedbackListView()
-                .tabItem {
-                    Image(systemName: "plus.bubble")
-                    Text("Feedback")
-                }
-            
-            MapaTiendasView()
-                .tabItem {
-                    Image(systemName: "map")
-                    Text("Mapa")
-                }
+        Group {
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+            } else if !loggedIn {
+                LoginView(onLogin: { loggedIn = true })
+                    .transition(.opacity)
+            } else {
+                MainView()
+                    .transition(.opacity)
+            }
         }
-        .accentColor(.blue)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    showSplash = false
+                }
+            }
+        }
     }
 }
 
