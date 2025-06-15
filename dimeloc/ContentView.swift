@@ -9,10 +9,10 @@ struct ContentView: View {
             if showSplash {
                 SplashView()
                     .transition(.opacity)
-            } else if !loggedIn {
+            } /*else if !loggedIn {
                 LoginView(onLogin: { loggedIn = true })
                     .transition(.opacity)
-            } else {
+            } */else {
                 MainView()
                     .transition(.opacity)
             }
