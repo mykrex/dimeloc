@@ -7,6 +7,9 @@ struct HomeView: View {
     private let softBlue = Color(red: 0.635, green: 0.824, blue: 1.0) // #A2D2FF
     private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
     
+    // MARK: - Authentication Manager
+    @EnvironmentObject private var authManager: AuthManager
+    
     // MARK: - Logout State
     @State private var showingLogoutAlert = false
     @State private var isLoggingOut = false
@@ -62,6 +65,12 @@ struct HomeView: View {
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.primary)
                         
+                        // Show user info if available
+                        if let user = authManager.currentUser {
+                            Text("Hola, \(user.nombre)")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
                     Spacer()
@@ -353,6 +362,18 @@ struct HomeView: View {
                                 .foregroundColor(.secondary)
                         }
                         
+                        if let user = authManager.currentUser {
+                            HStack(spacing: 8) {
+                                Image(systemName: "envelope")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                
+                                Text(user.email)
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
                         HStack(spacing: 8) {
                             Image(systemName: "clock")
                                 .font(.system(size: 12, weight: .medium))
@@ -372,39 +393,23 @@ struct HomeView: View {
         .alert("Terminar Sesión", isPresented: $showingLogoutAlert) {
             Button("Cancelar", role: .cancel) { }
             Button("Cerrar Sesión", role: .destructive) {
-                Task {
-                    await performLogout()
-                }
+                performLogout()
             }
         } message: {
             Text("¿Estás seguro de que quieres cerrar tu sesión?")
         }
     }
     
-    // MARK: - 🚪 LOGOUT FUNCTION
-    private func performLogout() async {
+    // MARK: - 🚪 LOGOUT FUNCTION (Fixed)
+    private func performLogout() {
         isLoggingOut = true
         
-        // Simular delay de red (puedes remover esto en producción)
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 segundo
-        
-        // Aquí implementarás la lógica real de logout:
-        // 1. Limpiar UserDefaults
-        // 2. Limpiar tokens de autenticación
-        // 3. Resetear el estado de la app
-        // 4. Navegar a la pantalla de login
-        
-        UserDefaults.standard.removeObject(forKey: "user_token")
-        UserDefaults.standard.removeObject(forKey: "user_id")
-        UserDefaults.standard.removeObject(forKey: "user_email")
-        
-        print("🚪 Logout realizado - limpiando datos de sesión")
-        
-        isLoggingOut = false
-        
-        // Aquí deberías navegar de vuelta al login
-        // Esto dependerá de cómo manejes la navegación en tu app
-        // Por ejemplo, podrías usar un @EnvironmentObject para el estado de autenticación
+        // Add a small delay for UX (optional)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Use the AuthManager's logout function
+            authManager.logout()
+            isLoggingOut = false
+        }
     }
 }
 
@@ -720,6 +725,7 @@ struct CalendarDayCell: View {
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView()
+            .environmentObject(AuthManager())
             .previewDisplayName("Home with Logout")
     }
 }

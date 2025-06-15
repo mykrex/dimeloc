@@ -1,9 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
-    var onLogin: () -> Void
-
-    @StateObject private var authManager = AuthManager()
+    @EnvironmentObject private var authManager: AuthManager
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showPassword: Bool = false
@@ -58,11 +56,6 @@ struct LoginView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .top)
-        .onChange(of: authManager.isAuthenticated) { isAuthenticated in
-            if isAuthenticated {
-                onLogin()
-            }
-        }
     }
 
     private func handleLogin() {
@@ -152,5 +145,6 @@ struct LoginView: View {
 }
 
 #Preview {
-    LoginView(onLogin: {})
+    LoginView()
+        .environmentObject(AuthManager())
 }

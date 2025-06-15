@@ -6,6 +6,7 @@ struct MainView: View {
     }
 
     @State private var selectedTab: Tab = .home
+    @EnvironmentObject private var authManager: AuthManager
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -13,6 +14,7 @@ struct MainView: View {
                 switch selectedTab {
                 case .home:
                     HomeView()
+                        .environmentObject(authManager)
                 case .map:
                     MapView()
                 case .admin:
@@ -53,4 +55,5 @@ struct BottomNavBar: View {
 
 #Preview {
     MainView()
+        .environmentObject(AuthManager())
 }
