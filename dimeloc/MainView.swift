@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     enum Tab {
-        case map, home, admin
+        case map, home, admin, darFeedback
     }
 
     @State private var selectedTab: Tab = .home
@@ -17,6 +17,8 @@ struct MainView: View {
                     MapView()
                 case .admin:
                     AdminView()
+                case .darFeedback:
+                    FeedbackListView()
                 }
             }
             BottomNavBar(selectedTab: $selectedTab)
@@ -32,6 +34,8 @@ struct BottomNavBar: View {
             navButton(icon: "map", tab: .map)
             navButton(icon: "house", tab: .home)
             navButton(icon: "chart.bar", tab: .admin)
+            navButton(icon: "bubble.left", tab: .darFeedback)
+
         }
         .padding()
         .background(.ultraThinMaterial)

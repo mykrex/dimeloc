@@ -1,6 +1,22 @@
 import SwiftUI
 
 struct HomeView: View {
+    // MARK: - App colors matching FeedbackListView
+    private let aiGradientStart = Color(red: 0.408, green: 0.541, blue: 0.914) // #688AE9
+    private let aiGradientEnd = Color(red: 0.776, green: 0.427, blue: 0.482) // #C66D7B
+    private let softBlue = Color(red: 0.635, green: 0.824, blue: 1.0) // #A2D2FF
+    private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
+    
+    // MARK: - Calendar State
+    @State private var selectedCalendarFilter: CalendarFilter = .month
+    @State private var selectedDate = Date()
+    
+    enum CalendarFilter: String, CaseIterable {
+        case day = "Día"
+        case week = "Semana"
+        case month = "Mes"
+    }
+
     // Mock user data
     var userName: String = "Maruca"
 
@@ -36,78 +52,571 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Greeting
-                Text("Hola, \(userName)")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.top)
-
-                // Gemini Insights Card
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.title2)
-                        .foregroundColor(.yellow)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Gemini Insights")
-                            .font(.headline)
-                        Text("\(userName) tienes \(pendingVisits.count) visitas pendientes este mes. Para tu siguiente visita, recomiendo checar el tema del refri agregado en el abarrote \(pendingVisits.first?.storeName ?? "Tienda A").")
-                            .font(.subheadline)
+                // MARK: - Sleek Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Hola, \(userName)")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Text("Dashboard")
+                            .font(.system(size: 14, weight: .regular))
                             .foregroundColor(.secondary)
                     }
+                    
+                    Spacer()
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
 
-                // Section: Pending Visits
-                Text("Visitas pendientes este mes")
-                    .font(.headline)
-
-                VStack(spacing: 16) {
-                    ForEach(pendingVisits) { visit in
-                        HStack {
-                            Text(visit.storeName)
-                                .font(.body)
-                            Spacer()
-                            Text(dateFormatter.string(from: visit.visitDate))
-                                .font(.subheadline)
+                // MARK: - Enhanced Gemini Insights Card
+                VStack(alignment: .leading, spacing: 16) {
+                    // Header with gradient elements
+                    HStack(alignment: .top, spacing: 12) {
+                        // Gradient lightbulb icon
+                        Image(systemName: "lightbulb.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [aiGradientStart, aiGradientEnd],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            // Gradient title
+                            Text("Gemini Insights")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [aiGradientStart, aiGradientEnd],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            
+                            Text("\(userName) tienes \(pendingVisits.count) visitas pendientes este mes. Para tu siguiente visita, recomiendo checar el tema del refri agregado en el abarrote \(pendingVisits.first?.storeName ?? "Tienda A").")
+                                .font(.system(size: 14, weight: .regular))
                                 .foregroundColor(.secondary)
+                                .lineLimit(nil)
                         }
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
+                        
+                        Spacer()
                     }
                 }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [aiGradientStart.opacity(0.3), aiGradientEnd.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                )
+                .padding(.horizontal, 20)
 
-                // Section: Pending Stores
-                Text("Tiendas pendientes de visita")
-                    .font(.headline)
-
-                VStack(spacing: 16) {
-                    ForEach(pendingStores) { store in
-                        HStack {
-                            Text(store.storeName)
-                                .font(.body)
-                            Spacer()
+                // MARK: - Calendar Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Calendario")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        // Calendar filter menu
+                        Menu {
+                            ForEach(CalendarFilter.allCases, id: \.self) { filter in
+                                Button(filter.rawValue) {
+                                    selectedCalendarFilter = filter
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(selectedCalendarFilter.rawValue)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         }
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
+                    }
+                    
+                    // Calendar View
+                    CalendarGridView(
+                        selectedDate: $selectedDate,
+                        filter: selectedCalendarFilter,
+                        pendingVisits: pendingVisits
+                    )
+                }
+                .padding(.horizontal, 20)
+
+                // MARK: - Pending Visits Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Visitas pendientes este mes")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Text("\(pendingVisits.count)")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle()
+                                    .fill(accentColor)
+                                    .shadow(color: accentColor.opacity(0.3), radius: 2, x: 0, y: 1)
+                            )
+                    }
+                    
+                    VStack(spacing: 12) {
+                        ForEach(pendingVisits) { visit in
+                            HStack(spacing: 12) {
+                                // Store icon
+                                Circle()
+                                    .fill(Color(.systemGray6))
+                                    .frame(width: 36, height: 36)
+                                    .overlay(
+                                        Image(systemName: "storefront")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(visit.storeName)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                    
+                                    Text(dateFormatter.string(from: visit.visitDate))
+                                        .font(.system(size: 12, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                // Status indicator
+                                Circle()
+                                    .fill(softBlue.opacity(0.3))
+                                    .frame(width: 8, height: 8)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
+                            )
+                        }
                     }
                 }
+                .padding(.horizontal, 20)
 
+                // MARK: - Pending Stores Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Tiendas pendientes de visita")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Text("\(pendingStores.count)")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle()
+                                    .fill(accentColor)
+                                    .shadow(color: accentColor.opacity(0.3), radius: 2, x: 0, y: 1)
+                            )
+                    }
+                    
+                    VStack(spacing: 12) {
+                        ForEach(pendingStores) { store in
+                            HStack(spacing: 12) {
+                                // Store icon
+                                Circle()
+                                    .fill(Color(.systemGray6))
+                                    .frame(width: 36, height: 36)
+                                    .overlay(
+                                        Image(systemName: "storefront")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(store.storeName)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                    
+                                    Text("Pendiente de primera visita")
+                                        .font(.system(size: 12, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                // Status indicator
+                                Circle()
+                                    .fill(Color.orange.opacity(0.3))
+                                    .frame(width: 8, height: 8)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                Spacer(minLength: 20)
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+// MARK: - Calendar Grid View Component
+struct CalendarGridView: View {
+    @Binding var selectedDate: Date
+    let filter: HomeView.CalendarFilter
+    let pendingVisits: [HomeView.PendingVisit]
+    
+    private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
+    private let calendar = Calendar.current
+    
+    // Get dates for current filter
+    private var displayDates: [Date] {
+        switch filter {
+        case .day:
+            return [selectedDate]
+        case .week:
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+            return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
+        case .month:
+            let startOfMonth = calendar.dateInterval(of: .month, for: selectedDate)?.start ?? selectedDate
+            let range = calendar.range(of: .day, in: .month, for: selectedDate) ?? 1..<32
+            return range.compactMap { day in
+                calendar.date(byAdding: .day, value: day - 1, to: startOfMonth)
+            }
+        }
+    }
+    
+    // Check if date has visits
+    private func hasVisit(on date: Date) -> Bool {
+        pendingVisits.contains { visit in
+            calendar.isDate(visit.visitDate, inSameDayAs: date)
+        }
+    }
+    
+    // Get visits for specific date
+    private func visits(for date: Date) -> [HomeView.PendingVisit] {
+        pendingVisits.filter { visit in
+            calendar.isDate(visit.visitDate, inSameDayAs: date)
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Current date header with navigation
+            HStack {
+                if filter == .day {
+                    Button(action: {
+                        selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(accentColor)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                Text(headerText)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                if filter == .day {
+                    Button(action: {
+                        selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                    }) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(accentColor)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            
+            // Calendar grid
+            LazyVGrid(columns: gridColumns, spacing: 8) {
+                ForEach(displayDates, id: \.self) { date in
+                    CalendarDayCell(
+                        date: date,
+                        isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
+                        hasVisit: hasVisit(on: date),
+                        visitCount: visits(for: date).count,
+                        filter: filter
+                    ) {
+                        selectedDate = date
+                    }
+                }
+            }
+            
+            // Selected day information
+            SelectedDayInfoView(
+                selectedDate: selectedDate,
+                visits: visits(for: selectedDate)
+            )
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
+        )
+    }
+    
+    private var headerText: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        
+        switch filter {
+        case .day:
+            formatter.dateFormat = "EEEE, d MMMM"
+            return formatter.string(from: selectedDate).capitalized
+        case .week:
+            formatter.dateFormat = "d MMM"
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+            let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? selectedDate
+            return "\(formatter.string(from: startOfWeek)) - \(formatter.string(from: endOfWeek))".capitalized
+        case .month:
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: selectedDate).capitalized
+        }
+    }
+    
+    private var gridColumns: [GridItem] {
+        switch filter {
+        case .day:
+            return [GridItem(.flexible())]
+        case .week:
+            return Array(repeating: GridItem(.flexible()), count: 7)
+        case .month:
+            return Array(repeating: GridItem(.flexible()), count: 7)
+        }
+    }
+}
+
+// MARK: - Selected Day Info View Component
+struct SelectedDayInfoView: View {
+    let selectedDate: Date
+    let visits: [HomeView.PendingVisit]
+    
+    private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "EEEE, d MMMM"
+        return formatter
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Date header
+            HStack {
+                Image(systemName: "calendar")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(accentColor)
+                
+                Text(dateFormatter.string(from: selectedDate).capitalized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                
                 Spacer()
             }
-            .padding()
+            
+            // Visits or no events message
+            if visits.isEmpty {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Text("No hay eventos este día")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(visits) { visit in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(accentColor)
+                                .frame(width: 6, height: 6)
+                            
+                            Text("Visita a \(visit.storeName)")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                        }
+                    }
+                }
+            }
         }
-        .padding(.horizontal, 10)
-        .background(Color(.systemBackground))
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.systemGray6).opacity(0.5))
+        )
+    }
+}
+
+// MARK: - Calendar Day Cell Component
+struct CalendarDayCell: View {
+    let date: Date
+    let isSelected: Bool
+    let hasVisit: Bool
+    let visitCount: Int
+    let filter: HomeView.CalendarFilter
+    let onTap: () -> Void
+    
+    private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
+    private let calendar = Calendar.current
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 4) {
+                // Day number
+                Text(dayText)
+                    .font(.system(size: filter == .month ? 14 : 16, weight: .medium))
+                    .foregroundColor(textColor)
+                
+                // Visit indicator
+                if hasVisit {
+                    if visitCount > 1 {
+                        Text("\(visitCount)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 16, height: 16)
+                            .background(Circle().fill(accentColor))
+                    } else {
+                        Circle()
+                            .fill(accentColor)
+                            .frame(width: 6, height: 6)
+                    }
+                } else {
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .frame(width: cellWidth, height: cellHeight)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(backgroundColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(borderColor, lineWidth: isSelected ? 2 : 0.5)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var dayText: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        
+        switch filter {
+        case .day:
+            formatter.dateFormat = "d"
+            return formatter.string(from: date)
+        case .week:
+            formatter.dateFormat = "EEE\nd"
+            return formatter.string(from: date).capitalized
+        case .month:
+            return "\(calendar.component(.day, from: date))"
+        }
+    }
+    
+    private var cellWidth: CGFloat {
+        switch filter {
+        case .day: return 80
+        case .week: return 40
+        case .month: return 35
+        }
+    }
+    
+    private var cellHeight: CGFloat {
+        switch filter {
+        case .day: return 60
+        case .week: return 50
+        case .month: return 40
+        }
+    }
+    
+    private var backgroundColor: Color {
+        if isSelected {
+            return accentColor.opacity(0.1)
+        }
+        return Color(.systemGray6).opacity(0.3)
+    }
+    
+    private var borderColor: Color {
+        if isSelected {
+            return accentColor
+        }
+        return Color(.systemGray6)
+    }
+    
+    private var textColor: Color {
+        if isSelected {
+            return accentColor
+        }
+        return .primary
     }
 }
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView()
-            .previewDisplayName("Mock Data with Insights")
+            .previewDisplayName("Redesigned Home with Calendar")
     }
 }
