@@ -13,39 +13,91 @@ struct Tienda: Codable, Identifiable {
     let id: Int
     let nombre: String
     let location: Location
-    let nps: Double
-    let fillfoundrate: Double
-    let damageRate: Double
-    let outOfStock: Double
-    let complaintResolutionTimeHrs: Double
+    private let _nps: Double?
+    private let _fillfoundrate: Double?
+    private let _damageRate: Double?
+    private let _outOfStock: Double?
+    private let _complaintResolutionTimeHrs: Double?
+    
+    // Propiedades calculadas con valores seguros
+    var nps: Double {
+        guard let value = _nps, value.isFinite else { return 0.0 }
+        return value
+    }
+    
+    var fillfoundrate: Double {
+        guard let value = _fillfoundrate, value.isFinite else { return 0.0 }
+        return value
+    }
+    
+    var damageRate: Double {
+        guard let value = _damageRate, value.isFinite else { return 0.0 }
+        return value
+    }
+    
+    var outOfStock: Double {
+        guard let value = _outOfStock, value.isFinite else { return 0.0 }
+        return value
+    }
+    
+    var complaintResolutionTimeHrs: Double {
+        guard let value = _complaintResolutionTimeHrs, value.isFinite else { return 24.0 }
+        return value
+    }
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case nombre
         case location
-        case nps
-        case fillfoundrate
-        case damageRate = "damage_rate"
-        case outOfStock = "out_of_stock"
-        case complaintResolutionTimeHrs = "complaint_resolution_time_hrs"
+        case _nps = "nps"
+        case _fillfoundrate = "fillfoundrate"
+        case _damageRate = "damage_rate"
+        case _outOfStock = "out_of_stock"
+        case _complaintResolutionTimeHrs = "complaint_resolution_time_hrs"
     }
 }
 
 struct Location: Codable {
-    let longitude: Double
-    let latitude: Double
+    private let _longitude: Double?
+    private let _latitude: Double?
+    
+    var longitude: Double {
+        guard let value = _longitude, value.isFinite else { return -100.3161 } // Default Monterrey
+        return value
+    }
+    
+    var latitude: Double {
+        guard let value = _latitude, value.isFinite else { return 25.6866 } // Default Monterrey
+        return value
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case _longitude = "longitude"
+        case _latitude = "latitude"
+    }
 }
 
-// Extensiones útiles
+// Extensiones con validación segura
 extension Tienda {
     var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
+        let lat = location.latitude
+        let lng = location.longitude
+        
+        // Validar que las coordenadas estén en rangos válidos
+        let safeLat = max(-90, min(90, lat))
+        let safeLng = max(-180, min(180, lng))
+        
+        return CLLocationCoordinate2D(latitude: safeLat, longitude: safeLng)
     }
     
     var performanceColor: Color {
-        if nps >= 50 && damageRate < 0.5 && outOfStock < 3 {
+        let safeNPS = nps
+        let safeDamage = damageRate
+        let safeStock = outOfStock
+        
+        if safeNPS >= 50 && safeDamage < 0.5 && safeStock < 3 {
             return .green
-        } else if nps >= 30 && damageRate < 1 && outOfStock < 4 {
+        } else if safeNPS >= 30 && safeDamage < 1 && safeStock < 4 {
             return .orange
         } else {
             return .red
@@ -53,9 +105,13 @@ extension Tienda {
     }
     
     var performanceText: String {
-        if nps >= 50 && damageRate < 0.5 && outOfStock < 3 {
+        let safeNPS = nps
+        let safeDamage = damageRate
+        let safeStock = outOfStock
+        
+        if safeNPS >= 50 && safeDamage < 0.5 && safeStock < 3 {
             return "Excelente"
-        } else if nps >= 30 && damageRate < 1 && outOfStock < 4 {
+        } else if safeNPS >= 30 && safeDamage < 1 && safeStock < 4 {
             return "Bueno"
         } else {
             return "Necesita atención"
