@@ -184,7 +184,13 @@ struct ConfirmarVisitaRequest: Codable {
 // MARK: - Respuestas de Insights Gemini
 struct InsightsResponse: Codable {
     let success: Bool
-    let count: Int
+    let count: Int?
+    let data: [GeminiInsight]
+    let error: String?
+}
+
+struct InsightsResponseFixed: Codable {
+    let success: Bool
     let data: [GeminiInsight]
     let error: String?
 }
@@ -294,6 +300,22 @@ struct AnalisisPredicciones: Codable {
         case nivelRiesgo = "nivel_riesgo"
         case indicadoresAlerta = "indicadores_alerta"
         case recomendacionesInmediatas = "recomendaciones_inmediatas"
+    }
+}
+
+struct PrediccionesGeneradasResponse: Codable {
+    let success: Bool
+    let tiendaId: Int
+    let prediccionId: String?
+    let predicciones: AnalisisPredicciones
+    let error: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case tiendaId = "tienda_id"
+        case prediccionId = "prediccion_id"
+        case predicciones
+        case error
     }
 }
 
@@ -418,7 +440,7 @@ struct GeoJSONProperties: Codable {
 // MARK: - Respuestas de Análisis Gemini por Tienda
 struct AnalisisGeminiResponse: Codable {
     let success: Bool
-    let count: Int
+    let count: Int?
     let data: [AnalisisGemini]
     let error: String?
 }
@@ -432,13 +454,14 @@ struct AnalisisGemini: Codable, Identifiable {
     let resultados: ResultadosPostvisita?
     let utilizado: Bool?
     let seguimientoRequerido: Bool?
+    let predicciones: AnalisisPredicciones?
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case tiendaId = "tienda_id"
         case tipoAnalisis = "tipo_analisis"
         case fechaAnalisis = "fecha_analisis"
-        case recomendaciones, resultados, utilizado
+        case recomendaciones, resultados, utilizado, predicciones
         case seguimientoRequerido = "seguimiento_requerido"
     }
 }
