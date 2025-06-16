@@ -21,7 +21,7 @@ struct GeminiInsightsView: View {
     @State private var errorMessage: String?
     @State private var selectedTab = 0
     
-    private let tabs = ["Insights Recientes", "Análisis Detallado", "Predicciones"]
+    private let tabs = ["Insights Recientes", "Previsita", "Predicciones"]
     
     var body: some View {
         VStack(spacing: 0) {
