@@ -13,7 +13,7 @@ struct TenderoFeedbackView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var apiClient = TiendasAPIClient()
     
-    @State private var colaboradorId = "user123" // TODO: Obtener del usuario actual
+    @State private var colaboradorId = "684e8db898718bc7d62aee7f"
     @State private var categoria = "servicio"
     @State private var tipo = "queja"
     @State private var urgencia = "media"
@@ -259,38 +259,70 @@ struct TenderoFeedbackView: View {
         isSubmitting = true
         
         do {
-            // Validar tienda antes de continuar
-            guard tienda.isValidId else {
-                errorMessage = "Error: ID de tienda inválido (\(tienda.id))"
+            // ✅ VALIDACIÓN CRÍTICA: Verificar ID de tienda
+            print("🔍 DEBUG - ID de tienda recibido: \(tienda.id)")
+            print("🔍 DEBUG - Nombre de tienda: \(tienda.nombre)")
+            
+            guard tienda.id > 0 else {
+                print("❌ ERROR: ID de tienda inválido (\(tienda.id))")
+                errorMessage = "Error: ID de tienda inválido (\(tienda.id)). Por favor, selecciona una tienda válida."
+                isSubmitting = false
+                return
+            }
+            
+            // ✅ VALIDACIÓN: Usuario colaborador
+            guard !colaboradorId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                print("❌ ERROR: ID de colaborador vacío")
+                errorMessage = "Error: ID de colaborador no configurado"
+                isSubmitting = false
+                return
+            }
+            
+            // ✅ VALIDACIÓN: Campos requeridos
+            let tituloTrimmed = titulo.trimmingCharacters(in: .whitespacesAndNewlines)
+            let descripcionTrimmed = descripcion.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            guard !tituloTrimmed.isEmpty else {
+                errorMessage = "El título es requerido"
+                isSubmitting = false
+                return
+            }
+            
+            guard !descripcionTrimmed.isEmpty else {
+                errorMessage = "La descripción es requerida"
                 isSubmitting = false
                 return
             }
             
             let nuevoFeedback = NuevoFeedbackTendero(
                 visitaId: visitaId,
-                tiendaId: tienda.id,
+                tiendaId: tienda.id, // ✅ Asegurar que este sea el ID correcto
                 colaboradorId: colaboradorId,
                 categoria: categoria,
                 tipo: tipo,
                 urgencia: urgencia,
-                titulo: titulo.trimmingCharacters(in: .whitespacesAndNewlines),
-                descripcion: descripcion.trimmingCharacters(in: .whitespacesAndNewlines)
+                titulo: tituloTrimmed,
+                descripcion: descripcionTrimmed
             )
             
-            print("📝 Enviando feedback del tendero para tienda \(tienda.id) (\(tienda.nombre))...")
-            print("   Tipo: \(tipoTexto(tipo))")
-            print("   Categoría: \(categoria)")
-            print("   Urgencia: \(urgencia)")
-            print("   Título: \(titulo)")
-            print("   Descripción: \(descripcion)")
+            print("📝 ENVIANDO FEEDBACK DEL TENDERO:")
+            print("   🏪 Tienda ID: \(nuevoFeedback.tiendaId)")
+            print("   🏪 Tienda Nombre: \(tienda.nombre)")
+            print("   👤 Colaborador ID: \(nuevoFeedback.colaboradorId)")
+            print("   📂 Categoría: \(nuevoFeedback.categoria)")
+            print("   🔴 Tipo: \(nuevoFeedback.tipo)")
+            print("   ⚠️ Urgencia: \(nuevoFeedback.urgencia)")
+            print("   📝 Título: \(nuevoFeedback.titulo)")
+            print("   📄 Descripción: \(nuevoFeedback.descripcion)")
             
-            // Por ahora simular el envío - cuando tengas el endpoint funcionando, descomenta esto:
-            // let response = try await apiClient.enviarFeedbackTenderoSafe(feedback: nuevoFeedback)
+            // ✅ HABILITAR ENVÍO REAL (comentado por ahora para debug)
+            let response = try await apiClient.enviarFeedbackTenderoSafe(feedback: nuevoFeedback)
             
-            // Simulación del envío
-            try await Task.sleep(nanoseconds: 1_500_000_000)
+            // Simulación para debug
+            // try await Task.sleep(nanoseconds: 1_500_000_000)
             
             print("✅ Feedback del tendero enviado exitosamente")
+            print("✅ Response: \(response)")
             showingSuccess = true
             
         } catch {
@@ -301,6 +333,7 @@ struct TenderoFeedbackView: View {
         isSubmitting = false
     }
 }
+
 
 // MARK: - Supporting Views (Componentes únicos para evitar conflictos)
 

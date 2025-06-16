@@ -9,9 +9,32 @@ import Foundation
 import CoreLocation
 import SwiftUI
 
-// MARK: - Tienda y Location (actualizados para tu API)
+// MARK: - Tienda y Location (VERSIÓN ÚNICA CORREGIDA)
 struct Tienda: Codable, Identifiable {
-    let id: Int
+    // ✅ MANEJO MEJORADO DE ID
+    private let _rawId: TiendaIdValue?
+    
+    // Computed property que maneja diferentes tipos de ID
+    var id: Int {
+        guard let rawId = _rawId else {
+            print("⚠️ Tienda sin ID detectada: \(nombre)")
+            return 0
+        }
+        
+        switch rawId {
+        case .int(let value):
+            return value
+        case .string(let stringValue):
+            // Intentar convertir string a int
+            if let intValue = Int(stringValue) {
+                return intValue
+            } else {
+                print("⚠️ No se pudo convertir ID string '\(stringValue)' a Int para tienda: \(nombre)")
+                return 0
+            }
+        }
+    }
+    
     let nombre: String
     let location: Location
     private let _nps: Double?
@@ -20,7 +43,7 @@ struct Tienda: Codable, Identifiable {
     private let _outOfStock: Double?
     private let _complaintResolutionTimeHrs: Double?
     
-    // ✅ CAMPOS RESTAURADOS para TiendaDetailView
+    // Campos adicionales para TiendaDetailView
     let horaAbre: String?
     let horaCierra: String?
     let direccion: String?
@@ -53,7 +76,7 @@ struct Tienda: Codable, Identifiable {
         return value
     }
     
-    // ✅ Propiedades de conveniencia para TiendaDetailView
+    // Propiedades de conveniencia para TiendaDetailView
     var horario: String {
         guard let abre = horaAbre, let cierra = horaCierra else {
             return "Horario no disponible"
@@ -83,8 +106,50 @@ struct Tienda: Codable, Identifiable {
         return fecha
     }
     
+    // ✅ ENUM para manejar diferentes tipos de ID
+    enum TiendaIdValue: Codable {
+        case int(Int)
+        case string(String)
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            
+            // Intentar decodificar como Int primero
+            if let intValue = try? container.decode(Int.self) {
+                self = .int(intValue)
+                return
+            }
+            
+            // Si falla, intentar como String
+            if let stringValue = try? container.decode(String.self) {
+                self = .string(stringValue)
+                return
+            }
+            
+            // Si ambos fallan, lanzar error
+            throw DecodingError.typeMismatch(
+                TiendaIdValue.self,
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Expected Int or String for tienda ID"
+                )
+            )
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .int(let value):
+                try container.encode(value)
+            case .string(let value):
+                try container.encode(value)
+            }
+        }
+    }
+    
+    // CodingKeys
     enum CodingKeys: String, CodingKey {
-        case id = "_id"
+        case _rawId = "_id"
         case nombre
         case location
         case _nps = "nps"
@@ -100,6 +165,7 @@ struct Tienda: Codable, Identifiable {
     }
 }
 
+// MARK: - Location
 struct Location: Codable {
     private let _longitude: Double?
     private let _latitude: Double?
@@ -114,7 +180,7 @@ struct Location: Codable {
         return value
     }
     
-    // ✅ AGREGADO: Constructor personalizado para TenderoFeedbackView
+    // Constructor personalizado para TenderoFeedbackView
     init(longitude: Double = -100.3161, latitude: Double = 25.6866) {
         self._longitude = longitude
         self._latitude = latitude
@@ -166,7 +232,7 @@ struct NuevoFeedback: Codable {
     let urgencia: String
 }
 
-// MARK: - ✅ NUEVAS ESTRUCTURAS PARA FEEDBACK BIDIRECCIONAL (para TenderoFeedbackView)
+// MARK: - NUEVAS ESTRUCTURAS PARA FEEDBACK BIDIRECCIONAL (para TenderoFeedbackView)
 struct FeedbackTendero: Codable, Identifiable {
     let id: String
     let visitaId: String?
@@ -373,6 +439,8 @@ struct GeminiInsight: Codable, Identifiable {
     let prioridad: String
     let resumen: String?
     let totalComentarios: Int?
+    let feedbackAnalizado: [String]?
+    let analisisManual: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
@@ -380,6 +448,8 @@ struct GeminiInsight: Codable, Identifiable {
         case fechaAnalisis = "fecha_analisis"
         case alertas, insights, recomendaciones, prioridad, resumen
         case totalComentarios = "total_comentarios"
+        case feedbackAnalizado = "feedback_analizado"
+        case analisisManual = "analisis_manual"
     }
 }
 
@@ -568,7 +638,7 @@ struct Notificacion: Codable, Identifiable {
     let datos: [String: String]?
 }
 
-// MARK: - ✅ EXTENSIONES ACTUALIZADAS para TenderoFeedbackView
+// MARK: - ✅ EXTENSIONES DE TIENDA
 extension Tienda {
     var coordinate: CLLocationCoordinate2D {
         let lat = location.latitude
@@ -609,26 +679,7 @@ extension Tienda {
         }
     }
     
-    // ✅ AGREGADO: Función para preview compatible con TenderoFeedbackView
-    static func preview() -> Tienda {
-        return Tienda(
-            id: 1,
-            nombre: "OXXO Centro",
-            location: Location(longitude: -100.3161, latitude: 25.6866),
-            _nps: 45.0,
-            _fillfoundrate: 95.0,
-            _damageRate: 0.8,
-            _outOfStock: 2.5,
-            _complaintResolutionTimeHrs: 24.0,
-            horaAbre: "06:00",
-            horaCierra: "23:00",
-            direccion: "Av. Universidad 123, Centro, Monterrey",
-            colaboradorAsignado: "maria.martinez@arcacontinental.mx",
-            fechaUltimaVisita: "2025-06-10T10:30:00Z"
-        )
-    }
-    
-    // ✅ AGREGADO: Validación para TenderoFeedbackView
+    // ✅ VALIDACIÓN MEJORADA
     var isValidId: Bool {
         return id > 0
     }
@@ -642,25 +693,23 @@ extension Tienda {
                complaintResolutionTimeHrs.isFinite
     }
     
-    // Versión segura para usar en UI
-    var safeNps: Double {
-        guard nps.isFinite else { return 0.0 }
-        return max(0, min(100, nps))
-    }
-    
-    var safeFillfoundrate: Double {
-        guard fillfoundrate.isFinite else { return 0.0 }
-        return max(0, min(100, fillfoundrate))
-    }
-    
-    var safeDamageRate: Double {
-        guard damageRate.isFinite else { return 0.0 }
-        return max(0, damageRate)
-    }
-    
-    var safeOutOfStock: Double {
-        guard outOfStock.isFinite else { return 0.0 }
-        return max(0, outOfStock)
+    // ✅ Preview para SwiftUI
+    static func preview() -> Tienda {
+        return Tienda(
+            _rawId: .int(1),
+            nombre: "OXXO Centro",
+            location: Location(longitude: -100.3161, latitude: 25.6866),
+            _nps: 45.0,
+            _fillfoundrate: 95.0,
+            _damageRate: 0.8,
+            _outOfStock: 2.5,
+            _complaintResolutionTimeHrs: 24.0,
+            horaAbre: "06:00",
+            horaCierra: "23:00",
+            direccion: "Av. Universidad 123, Centro, Monterrey",
+            colaboradorAsignado: "maria.martinez@arcacontinental.mx",
+            fechaUltimaVisita: "2025-06-10T10:30:00Z"
+        )
     }
 }
 

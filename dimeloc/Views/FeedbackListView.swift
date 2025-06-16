@@ -11,6 +11,7 @@ struct FeedbackListView: View {
     // MARK: - App accent color
     private let accentColor = Color(red: 1.0, green: 0.294, blue: 0.2) // #FF4B33
     
+    // ✅ TODAS LAS VARIABLES DE ESTADO AGRUPADAS AL INICIO
     @StateObject private var apiClient = TiendasAPIClient()
     @State private var tiendas: [Tienda] = []
     @State private var isLoading = false
@@ -18,11 +19,10 @@ struct FeedbackListView: View {
     @State private var selectedTienda: Tienda?
     @State private var showingFeedback = false
     @State private var searchText = ""
-    
-    // ✅ NUEVOS ESTADOS para manejar la selección de tipo de feedback
     @State private var showingFeedbackTypeSheet = false
     @State private var showingTenderoFeedback = false
     @State private var showingColaboradorFeedback = false
+    @State private var selectedPattern: String = "Todas"
 
     // Patrón para logos
     private let patterns: [String: [String]] = [
@@ -34,7 +34,6 @@ struct FeedbackListView: View {
         "soriana":   ["soriana"],
         "walmart":   ["walmart"]
     ]
-    @State private var selectedPattern: String = "Todas"
 
     /// Filtra tiendas según logo seleccionado
     private var patternFilteredTiendas: [Tienda] {
@@ -183,7 +182,6 @@ struct FeedbackListView: View {
                             LazyVStack(spacing: 8) {
                                 ForEach(filteredTiendas) { tienda in
                                     TiendaFeedbackRow(tienda: tienda) {
-                                        // ✅ CAMBIO: Mostrar selector de tipo de feedback
                                         selectedTienda = tienda
                                         showingFeedbackTypeSheet = true
                                     }
@@ -202,7 +200,7 @@ struct FeedbackListView: View {
             }
             .background(Color(.systemGroupedBackground))
             
-            // ✅ NUEVO: ActionSheet para seleccionar tipo de feedback
+            // ActionSheet para seleccionar tipo de feedback
             .confirmationDialog("¿Qué tipo de feedback quieres agregar?", isPresented: $showingFeedbackTypeSheet, titleVisibility: .visible) {
                 Button("🏪 Feedback del Tendero") {
                     showingTenderoFeedback = true
@@ -219,7 +217,7 @@ struct FeedbackListView: View {
                 }
             }
             
-            // ✅ NUEVOS: Sheets para cada tipo de feedback
+            // Sheets para cada tipo de feedback
             .sheet(isPresented: $showingTenderoFeedback) {
                 if let tienda = selectedTienda {
                     TenderoFeedbackView(tienda: tienda, visitaId: nil)
@@ -247,7 +245,19 @@ struct FeedbackListView: View {
         isLoading = true
         errorMessage = nil
         do {
-            tiendas = try await apiClient.obtenerTiendas()
+            // ✅ FILTRAR tiendas con ID válido
+            let todasLasTiendas = try await apiClient.obtenerTiendas()
+            
+            tiendas = todasLasTiendas.filter { tienda in
+                let esValida = tienda.isValidId
+                if !esValida {
+                    print("⚠️ Filtrando tienda con ID inválido: '\(tienda.nombre)' (ID: \(tienda.id))")
+                }
+                return esValida
+            }
+            
+            print("✅ Tiendas cargadas: \(tiendas.count) de \(todasLasTiendas.count) son válidas")
+            
         } catch {
             errorMessage = "Error cargando tiendas: \(error.localizedDescription)"
         }
@@ -362,8 +372,15 @@ struct TiendaFeedbackRow: View {
                 .buttonStyle(PlainButtonStyle())
                 .scaleEffect(isPressed ? 0.95 : 1.0)
                 
-                // ✅ CAMBIO: Botón de feedback actualizado con nuevo ícono
-                Button(action: onFeedbackTap) {
+                // ✅ BOTÓN DE FEEDBACK CON VALIDACIÓN
+                Button(action: {
+                    // ✅ VALIDAR ID antes de permitir feedback
+                    if tienda.isValidId {
+                        onFeedbackTap()
+                    } else {
+                        print("❌ No se puede crear feedback para tienda con ID inválido: \(tienda.id)")
+                    }
+                }) {
                     Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
@@ -372,7 +389,10 @@ struct TiendaFeedbackRow: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [Color.purple.opacity(0.8), Color.purple],
+                                        colors: [
+                                            tienda.isValidId ? Color.purple.opacity(0.8) : Color.gray.opacity(0.5),
+                                            tienda.isValidId ? Color.purple : Color.gray
+                                        ],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -380,6 +400,7 @@ struct TiendaFeedbackRow: View {
                         )
                         .shadow(color: Color.purple.opacity(0.3), radius: 1, x: 0, y: 0.5)
                 }
+                .disabled(!tienda.isValidId)
                 .buttonStyle(PlainButtonStyle())
                 .scaleEffect(isPressed ? 0.95 : 1.0)
             }
@@ -402,71 +423,8 @@ struct TiendaFeedbackRow: View {
             }
         }, perform: {})
         .sheet(isPresented: $showingInsights) {
-            InsightsView(tienda: tienda)
+            GeminiInsightsView(tienda: tienda)
         }
-    }
-}
-
-// MARK: - Additional minimal design improvements for FeedbackListView
-extension FeedbackListView {
-    
-    // MARK: - Ultra minimal empty state
-    @ViewBuilder
-    private var enhancedEmptyState: some View {
-        VStack(spacing: 16) {
-            // Minimal icon with subtle animation
-            Image(systemName: "storefront")
-                .font(.system(size: 40, weight: .ultraLight))
-                .foregroundColor(.secondary.opacity(0.6))
-                .scaleEffect(1.0)
-                .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: UUID())
-            
-            VStack(spacing: 6) {
-                Text(searchText.isEmpty ? "No hay tiendas" : "Sin resultados")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
-                
-                if !searchText.isEmpty {
-                    Text("Prueba con otro término")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Enhanced minimal search bar
-    @ViewBuilder
-    private var enhancedSearchBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary.opacity(0.7))
-            
-            TextField("Buscar", text: $searchText)
-                .font(.system(size: 15, weight: .regular))
-                .disableAutocorrection(true)
-                .textFieldStyle(PlainTextFieldStyle())
-            
-            if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary.opacity(0.6))
-                }
-                .buttonStyle(PlainButtonStyle())
-                .transition(.opacity.combined(with: .scale))
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(.systemGray6).opacity(0.7))
-        )
-        .animation(.easeInOut(duration: 0.2), value: searchText.isEmpty)
     }
 }
 
