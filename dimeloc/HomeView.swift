@@ -24,29 +24,52 @@ struct HomeView: View {
         case month = "Mes"
     }
 
-    // Mock user data
-
-    // Mock data models
+    // MARK: - Updated Mock data models with image parameter
     struct PendingVisit: Identifiable {
         let id = UUID()
         let storeName: String
         let visitDate: Date
+        let image: String // 👈 Nuevo parámetro
     }
+    
     struct PendingStore: Identifiable {
         let id = UUID()
         let storeName: String
+        let image: String // 👈 Nuevo parámetro
     }
 
-    // Example mock data
+    // MARK: - Updated example mock data with images
     var pendingVisits: [PendingVisit] = [
-        PendingVisit(storeName: "Tienda A", visitDate: DateComponents(calendar: .current, year: 2025, month: 6, day: 10).date!),
-        PendingVisit(storeName: "Tienda B", visitDate: DateComponents(calendar: .current, year: 2025, month: 6, day: 15).date!),
-        PendingVisit(storeName: "Tienda C", visitDate: DateComponents(calendar: .current, year: 2025, month: 6, day: 20).date!)
+        PendingVisit(
+            storeName: "Oxxo Junco de la Vega",
+            visitDate: DateComponents(calendar: .current, year: 2025, month: 6, day: 25).date!,
+            image: "oxxo"
+        ),
+        PendingVisit(
+            storeName: "Modelorama Rio Nazas",
+            visitDate: DateComponents(calendar: .current, year: 2025, month: 7, day: 2).date!,
+            image: "modelorama"
+        ),
+        PendingVisit(
+            storeName: "OXXO Colima II",
+            visitDate: DateComponents(calendar: .current, year: 2025, month: 7, day: 9).date!,
+            image: "oxxo"
+        )
     ]
+    
     var pendingStores: [PendingStore] = [
-        PendingStore(storeName: "Tienda X"),
-        PendingStore(storeName: "Tienda Y"),
-        PendingStore(storeName: "Tienda Z")
+        PendingStore(
+            storeName: "H-E-B Valle Oriente",
+            image: "heb"
+        ),
+        PendingStore(
+            storeName: "Walmart las Torres",
+            image: "walmart"
+        ),
+        PendingStore(
+            storeName: "7-Eleven Benito Juarez",
+            image: "7eleven"
+        )
     ]
 
     private let dateFormatter: DateFormatter = {
@@ -60,14 +83,13 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 24) {
                 // MARK: - Sleek Header
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Dashboard")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.primary)
-                        
-                        // Show user info if available
-                        if let user = authManager.currentUser {
+                    // Show user info if available
+                    if let user = authManager.currentUser {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("Hola, \(user.nombre)")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.primary)
+                            Text("Dashboard")
                                 .font(.system(size: 14, weight: .regular))
                                 .foregroundColor(.secondary)
                         }
@@ -84,7 +106,7 @@ struct HomeView: View {
                     HStack(alignment: .top, spacing: 12) {
                         // Gradient lightbulb icon
                         Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 24, weight: .semibold))
+                            .font(.system(size: 28, weight: .semibold))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [aiGradientStart, aiGradientEnd],
@@ -94,24 +116,24 @@ struct HomeView: View {
                             )
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            // Gradient title
-                            Text("Gemini Insights")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [aiGradientStart, aiGradientEnd],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
+                            if let user = authManager.currentUser {
+                                // Gradient title
+                                Text("Gemini Insights")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [aiGradientStart, aiGradientEnd],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
                                     )
-                                )
-                            
-                            Text("Tienes \(pendingVisits.count) visitas pendientes este mes. Para tu siguiente visita, recomiendo checar el tema del refri agregado en el abarrote \(pendingVisits.first?.storeName ?? "Tienda A").")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(.secondary)
-                                .lineLimit(nil)
+                                
+                                // 👈 Updated text with bold store name
+                                Text(attributedInsightText(for: user.nombre))
+                                    .font(.system(size: 14, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        
-                        Spacer()
                     }
                 }
                 .padding(20)
@@ -175,10 +197,10 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
 
-                // MARK: - Pending Visits Section
+                // MARK: - Pending Visits Section with custom images and navigation
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("Visitas pendientes este mes")
+                        Text("Visitas pendientes:")
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.primary)
                         
@@ -197,51 +219,77 @@ struct HomeView: View {
                     
                     VStack(spacing: 12) {
                         ForEach(pendingVisits) { visit in
-                            HStack(spacing: 12) {
-                                // Store icon
-                                Circle()
-                                    .fill(Color(.systemGray6))
-                                    .frame(width: 36, height: 36)
-                                    .overlay(
-                                        Image(systemName: "storefront")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(.secondary)
-                                    )
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(visit.storeName)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.primary)
+                            Button(action: {
+                                // TODO: Navigate to TiendaDetailView - you'll add the parameters later
+                                print("Navigate to TiendaDetailView for: \(visit.storeName)")
+                            }) {
+                                HStack(spacing: 12) {
+                                    // Store icon with custom image
+                                    ZStack {
+                                        if visit.image.isEmpty {
+                                            Circle()
+                                                .fill(Color(.systemGray6))
+                                                .frame(width: 36, height: 36)
+                                                .overlay(
+                                                    Image(systemName: "storefront")
+                                                        .font(.system(size: 14, weight: .medium))
+                                                        .foregroundColor(.secondary)
+                                                )
+                                        } else {
+                                            Image(visit.image)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 36, height: 36)
+                                                .clipShape(Circle())
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                                )
+                                        }
+                                    }
                                     
-                                    Text(dateFormatter.string(from: visit.visitDate))
-                                        .font(.system(size: 12, weight: .regular))
-                                        .foregroundColor(.secondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(visit.storeName)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(.primary)
+                                        
+                                        Text(dateFormatter.string(from: visit.visitDate))
+                                            .font(.system(size: 12, weight: .regular))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Status indicator + Navigation arrow
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(softBlue.opacity(0.3))
+                                            .frame(width: 8, height: 8)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
-                                
-                                Spacer()
-                                
-                                // Status indicator
-                                Circle()
-                                    .fill(softBlue.opacity(0.3))
-                                    .frame(width: 8, height: 8)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
-                            )
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
                 .padding(.horizontal, 20)
 
-                // MARK: - Pending Stores Section
+                // MARK: - Pending Stores Section with custom images and navigation
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("Tiendas pendientes de visita")
@@ -263,45 +311,71 @@ struct HomeView: View {
                     
                     VStack(spacing: 12) {
                         ForEach(pendingStores) { store in
-                            HStack(spacing: 12) {
-                                // Store icon
-                                Circle()
-                                    .fill(Color(.systemGray6))
-                                    .frame(width: 36, height: 36)
-                                    .overlay(
-                                        Image(systemName: "storefront")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(.secondary)
-                                    )
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(store.storeName)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.primary)
+                            Button(action: {
+                                // TODO: Navigate to TiendaDetailView - you'll add the parameters later
+                                print("Navigate to TiendaDetailView for: \(store.storeName)")
+                            }) {
+                                HStack(spacing: 12) {
+                                    // Store icon with custom image
+                                    ZStack {
+                                        if store.image.isEmpty {
+                                            Circle()
+                                                .fill(Color(.systemGray6))
+                                                .frame(width: 36, height: 36)
+                                                .overlay(
+                                                    Image(systemName: "storefront")
+                                                        .font(.system(size: 14, weight: .medium))
+                                                        .foregroundColor(.secondary)
+                                                )
+                                        } else {
+                                            Image(store.image)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 36, height: 36)
+                                                .clipShape(Circle())
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                                )
+                                        }
+                                    }
                                     
-                                    Text("Pendiente de primera visita")
-                                        .font(.system(size: 12, weight: .regular))
-                                        .foregroundColor(.secondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(store.storeName)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(.primary)
+                                        
+                                        Text("Pendiente de primera visita")
+                                            .font(.system(size: 12, weight: .regular))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Status indicator + Navigation arrow
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(Color.orange.opacity(0.3))
+                                            .frame(width: 8, height: 8)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
-                                
-                                Spacer()
-                                
-                                // Status indicator
-                                Circle()
-                                    .fill(Color.orange.opacity(0.3))
-                                    .frame(width: 8, height: 8)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Color(.systemGray6).opacity(0.5), lineWidth: 0.5)
-                            )
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
@@ -398,6 +472,18 @@ struct HomeView: View {
         } message: {
             Text("¿Estás seguro de que quieres cerrar tu sesión?")
         }
+    }
+    
+    // MARK: - Helper para texto con bold
+    private func attributedInsightText(for userName: String) -> AttributedString {
+        var attributedString = AttributedString("\(userName), tienes 1 visita pendiente este mes. Para tu siguiente visita con Oxxo Junco de la Vega, recomiendo priorizar el tema del refrigerador averiado y la optimizacion del inventario.")
+        
+        // Hacer bold "Oxxo Junco de la Vega"
+        if let range = attributedString.range(of: "Oxxo Junco de la Vega") {
+            attributedString[range].font = .system(size: 14, weight: .bold)
+        }
+        
+        return attributedString
     }
     
     // MARK: - 🚪 LOGOUT FUNCTION (Fixed)
