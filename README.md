@@ -1,4 +1,5 @@
 # Dimeloc – Sistema de Gestión de Tiendas con IA
+## 🏆 GANADOR 1er Lugar Hackaton Hack4Her
 ---
 
 ## 📋 Descripción del Proyecto
@@ -76,34 +77,21 @@ Arca Continental atiende a miles de tiendas que usan la app Tuali para pedidos. 
 ---
 
 ## 🏗️ Arquitectura Técnica
+DiMeLoc utiliza una arquitectura moderna y escalable que separa claramente las responsabilidades entre frontend y backend, permitiendo un desarrollo ágil y mantenimiento eficiente.
 
-### 📱 Frontend – iOS (SwiftUI)
+### 📱 Frontend - iOS App (SwiftUI)
 
-    dimeloc/
-    ├── Views/
-    │   ├── FeedbackListView.swift
-    │   ├── TenderoFeedbackView.swift
-    │   ├── AdminView.swift
-    │   ├── MapView.swift
-    │   └── TiendaDetailView.swift
-    ├── Models/
-    │   ├── Models.swift
-    │   ├── AuthModels.swift
-    │   └── APIResponses.swift
-    ├── Services/
-    │   ├── TiendasAPIClient.swift
-    │   └── AuthAPIClient.swift
-    ├── Managers/
-    │   └── AuthManager.swift
-    └── Assets.xcassets/
-        ├── Logos de tiendas
-        └── Iconografía personalizada
+Tecnologías Principales
+- SwiftUI: Framework nativo de Apple para interfaces declarativas
+- MapKit: Integración nativa con mapas y geolocalización
+- CoreLocation: Servicios de ubicación y geocodificación
 
-### 🌐 Backend Integration
-- **API REST** en Node.js con Express  
-- **Base de datos** MongoDB  
-- **Gemini IA** para análisis y generación de insights  
-- **Autenticación** JWT con roles diferenciados  
+### ⚙️ Backend - API REST
+
+Tecnologías del Stack
+- Lenguaje: Node.js
+- Framework: Express
+- Base de Datos: MongoDB
 
 ---
 
@@ -121,63 +109,6 @@ Arca Continental atiende a miles de tiendas que usan la app Tuali para pedidos. 
 
 ---
 
-## 📦 Instalación y Configuración
-
-### 📋 Requisitos
-- Xcode 15.0+  
-- iOS 17.0+  
-- Cuenta de desarrollador Apple  
-
-### ⚙️ Configuración Local
-
-1. Clonar el repositorio  
-   ```bash
-   git clone https://github.com/tu-usuario/dimeloc-ios.git
-   cd dimeloc-ios
-   ```  
-2. Abrir en Xcode  
-   ```bash
-   open dimeloc.xcodeproj
-   ```  
-3. Verificar que los assets (logos de tiendas) estén en `Assets.xcassets`  
-
-### 🔧 Configuración de API
-
-```swift
-// APIConfig.swift
-struct APIConfig {
-    static let baseURL = "https://dimeloc-backend.onrender.com/api"
-    static let timeout: TimeInterval = 30.0
-
-    struct TestUsers {
-        static let colaborador = TestUser(
-            email: "colaborador@arcacontinental.mx",
-            password: "password123",
-            rol: "colaborador"
-        )
-    }
-}
-```
-
----
-
-## 🧪 Testing y Validación
-
-- Health Check – Verificación de conectividad con backend  
-- Autenticación – Login y validación de tokens  
-- CRUD Tiendas – Obtención y filtrado de tiendas  
-- Feedback System – Envío y recepción de comentarios  
-- IA Integration – Generación de insights con Gemini  
-
-**Casos probados**:  
-- Login exitoso  
-- Visualización de mapa con 1000+ tiendas  
-- Filtrado en tiempo real  
-- Envío de feedback con análisis IA  
-- Navegación fluida entre vistas  
-
----
-
 ## 📊 Métricas y KPIs
 
 - **NPS (Net Promoter Score)**: 0–100  
@@ -188,15 +119,6 @@ struct APIConfig {
 
 ---
 
-## 📄 Licencia y Seguridad
-
-Este proyecto es propiedad de Arca Continental (uso interno).  
-- **Autenticación** JWT con roles  
-- **HTTPS** en todas las comunicaciones  
-- **Validación** de datos en frontend/backend  
-- **Logs** de auditoría para acciones críticas  
-
----
 
 ## 📞 Contacto y Soporte
 - **Nombre**: Maria Quetzali Ramirez Martinez
@@ -207,6 +129,5 @@ Este proyecto es propiedad de Arca Continental (uso interno).
 ---
 
 <div align="center">
-  <strong>Desarrollado con ❤️ y 🤖 IA para Arca Continental</strong>  
-  <em>"Conectando con el Punto de Venta a través de la Innovación"</em>
+  <strong>Desarrollado con ❤️ y 🤖 IA para Arca Continental y Hack4Her</strong>  
 </div>
